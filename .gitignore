@@ -1,0 +1,8 @@
+/.android-tools/
+/*.apk
+/OpenCover-source.zip
+**/.kotlin/
+*.jks
+*.keystore
+keystore.properties
+local.properties
