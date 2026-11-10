@@ -6,6 +6,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
+import android.content.ComponentName
+import android.content.ServiceConnection
+import rikka.shizuku.Shizuku
 import android.content.pm.ServiceInfo
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
@@ -17,6 +20,7 @@ import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
 import dev.opencover.apps.AppLauncher
+import dev.opencover.quick.ShizukuShell
 import dev.opencover.phone.HeatGuard
 import android.view.Display
 import android.view.Surface
@@ -33,6 +37,17 @@ class MirrorService : Service() {
     var captureWidth = 0; private set
     var captureHeight = 0; private set
     private var captureDpi = 0
+    var sourceDisplayId = Display.DEFAULT_DISPLAY; private set
+    private var enteredInnerEnvironment = false
+    private var selectingSource = false
+    private var desktopSourceReady = false
+    private var pendingSurface: Surface? = null
+    private var projectionToken: IBinder? = null
+    private var sourceConnection: ServiceConnection? = null
+    private val sourceArgs by lazy {
+        Shizuku.UserServiceArgs(ComponentName(packageName, DesktopMirrorSource::class.java.name))
+            .daemon(false).processNameSuffix("mirror-source").version(3)
+    }
     private val handler = Handler(Looper.getMainLooper())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -40,6 +55,17 @@ class MirrorService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) { stop(); return START_NOT_STICKY }
         if (intent == null) { stopSelf(); return START_NOT_STICKY }
+        if (instance != null) return START_NOT_STICKY
+        sourceDisplayId = intent.getIntExtra(KEY_SOURCE_DISPLAY, Display.DEFAULT_DISPLAY)
+        val dm = getSystemService(DisplayManager::class.java)
+        val source = dm.getDisplay(sourceDisplayId)
+        if (source == null || selectedMirrorSource(dm.displays.map {
+                MirrorSource(it.displayId, it.name, (it.flags and Display.FLAG_PRESENTATION) == 0)
+            }, sourceDisplayId) == null || (sourceDisplayId != Display.DEFAULT_DISPLAY && !ShizukuShell.allowed())) {
+            Toast.makeText(this, "Màn hình đã đóng hoặc chưa có quyền Shizuku", Toast.LENGTH_LONG).show()
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val resultCode = intent.getIntExtra(KEY_RESULT_CODE, 0)
         val data: Intent = intent.getParcelableExtra(KEY_DATA, Intent::class.java) ?: run { stopSelf(); return START_NOT_STICKY }
 
@@ -50,7 +76,7 @@ class MirrorService : Service() {
         )
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_view)
-            .setContentTitle("Mirroring inner screen")
+            .setContentTitle(if (sourceDisplayId == Display.DEFAULT_DISPLAY) "Mirroring inner screen" else "Mirroring Desktop: ${source.name}")
             .addAction(Notification.Action.Builder(null, "Stop", stopIntent).build())
             .setOngoing(true)
             .build()
@@ -62,12 +88,15 @@ class MirrorService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val dm = getSystemService(DisplayManager::class.java)
-        val main = dm.getDisplay(Display.DEFAULT_DISPLAY) ?: run { stopSelf(); return START_NOT_STICKY }
-        readMetrics(main)
+        readMetrics(source)
         instance = this
         HeatGuard.evaluate() // mirroring counts as a heat source
 
+        if (sourceDisplayId != Display.DEFAULT_DISPLAY) {
+            acquireProjection(resultCode, data)
+            return START_NOT_STICKY
+        }
+        enteredInnerEnvironment = true
         // Folded, display 0 is off and renders nothing, so MediaProjection would capture the cover
         // (infinite mirror). Z Cover Power forces the unfolded device state first; so do we.
         val ready = Runnable { acquireProjection(resultCode, data) }
@@ -105,22 +134,24 @@ class MirrorService : Service() {
 
     private fun acquireProjection(resultCode: Int, data: Intent) {
         if (instance == null) return
-        getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)?.let(::readMetrics)
+        getSystemService(DisplayManager::class.java).getDisplay(sourceDisplayId)?.let(::readMetrics)
         val mpm = getSystemService(MediaProjectionManager::class.java)
+        projectionToken = data.extras?.getBinder("android.media.projection.extra.EXTRA_MEDIA_PROJECTION")
         projection = try { mpm.getMediaProjection(resultCode, data) } catch (_: Exception) { null }
         val p = projection ?: run { stop(); return }
         p.registerCallback(object : MediaProjection.Callback() {
-            override fun onStop() { this@MirrorService.stop() }
+            override fun onStop() { if (instance === this@MirrorService) this@MirrorService.stop() }
         }, handler)
         Log.d(TAG, "projection ready ${captureWidth}x$captureHeight")
         // Launch only now: the device-state switch moves whatever is on the cover to display 0.
         showMirror(clear = true)
         mirrorShown = true
-        MirrorInput.start(this) // live touch
+        MirrorInput.start(this, sourceDisplayId) // live touch on the selected source
+        LiveGesture.displayId = sourceDisplayId
         innerWatch.wasOn = getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)?.state == Display.STATE_ON
         getSystemService(DisplayManager::class.java).registerDisplayListener(innerWatch, handler)
         val app = applicationContext
-        MirrorEnv.later { MirrorEnv.hideAccessibility(app) }
+        if (enteredInnerEnvironment) MirrorEnv.later { MirrorEnv.hideAccessibility(app) }
     }
 
     /** The mirror screen has been opened for this session (so bringing it back to the front is safe). */
@@ -133,20 +164,56 @@ class MirrorService : Service() {
     }
 
     fun setSurface(s: Surface?) {
+        pendingSurface = s
         if (s != null && s.isValid) {
             val p = projection ?: return
             if (virtualDisplay == null) {
                 virtualDisplay = p.createVirtualDisplay(
                     "OpenCover-mirror", captureWidth, captureHeight, captureDpi,
                     DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                    s, null, null,
+                    if (sourceDisplayId == Display.DEFAULT_DISPLAY) s else null, null, null,
                 )
+                if (sourceDisplayId != Display.DEFAULT_DISPLAY) selectDesktopSource(virtualDisplay!!.display.displayId)
             } else {
-                virtualDisplay?.surface = s
+                virtualDisplay?.surface = if (sourceDisplayId == Display.DEFAULT_DISPLAY || desktopSourceReady) s else null
             }
         } else {
             virtualDisplay?.surface = null
         }
+    }
+
+    private fun selectDesktopSource(destination: Int) {
+        if (selectingSource) return
+        selectingSource = true
+        val source = sourceDisplayId
+        val token = projectionToken
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+                MirrorEnv.later {
+                    val ok = runCatching { IDesktopMirror.Stub.asInterface(binder).selectSource(source, destination, token) }.getOrDefault(false)
+                    handler.post {
+                        selectingSource = false
+                        if (instance === this@MirrorService) {
+                            if (ok) {
+                                desktopSourceReady = true
+                                virtualDisplay?.surface = pendingSurface?.takeIf { it.isValid }
+                            } else sourceFailed()
+                        }
+                    }
+                }
+            }
+            override fun onServiceDisconnected(name: ComponentName?) {
+                if (instance === this@MirrorService) sourceFailed()
+            }
+        }
+        sourceConnection = connection
+        runCatching { Shizuku.bindUserService(sourceArgs, connection) }.onFailure { sourceFailed() }
+        handler.postDelayed({ if (instance === this && selectingSource) sourceFailed() }, 10_000)
+    }
+
+    private fun sourceFailed() {
+        Toast.makeText(this, "Không chuyển được nguồn Desktop trên thiết bị này", Toast.LENGTH_LONG).show()
+        stop()
     }
 
     /**
@@ -156,25 +223,34 @@ class MirrorService : Service() {
     private val innerWatch = object : DisplayManager.DisplayListener {
         var wasOn = false
         override fun onDisplayChanged(id: Int) {
-            if (id != Display.DEFAULT_DISPLAY || instance !== this@MirrorService) return
+            if (id != sourceDisplayId || instance !== this@MirrorService) return
+            if (sourceDisplayId != Display.DEFAULT_DISPLAY) return
             val on = getSystemService(DisplayManager::class.java).getDisplay(id)?.state == Display.STATE_ON
             if (on) wasOn = true
             else if (wasOn) { Log.i(TAG, "inner screen turned off: ending the session"); stop() }
         }
         override fun onDisplayAdded(id: Int) {}
-        override fun onDisplayRemoved(id: Int) {}
+        override fun onDisplayRemoved(id: Int) {
+            if (id == sourceDisplayId && instance === this@MirrorService) stop()
+        }
     }
 
     fun stop() {
         runCatching { getSystemService(DisplayManager::class.java).unregisterDisplayListener(innerWatch) }
+        sourceConnection?.let { runCatching { Shizuku.unbindUserService(sourceArgs, it, true) } }
+        sourceConnection = null
         MirrorInput.stop()
-        if (instance != null) MirrorEnv.leave(this)
+        if (instance === this && enteredInnerEnvironment) MirrorEnv.leave(this)
+        enteredInnerEnvironment = false
         instance = null
         HeatGuard.evaluate()
         runCatching { virtualDisplay?.release() }
         runCatching { projection?.stop() }
         virtualDisplay = null
         projection = null
+        pendingSurface = null
+        projectionToken = null
+        desktopSourceReady = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -195,6 +271,7 @@ class MirrorService : Service() {
     }
 
     companion object {
+        const val KEY_SOURCE_DISPLAY = "source_display"
         const val KEY_RESULT_CODE = "rc"
         const val KEY_DATA = "data"
         const val ACTION_STOP = "stop"

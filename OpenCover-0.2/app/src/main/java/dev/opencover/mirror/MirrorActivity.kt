@@ -14,8 +14,8 @@ import androidx.activity.ComponentActivity
 import dev.opencover.phone.PhonePrefs
 
 /**
- * Full-screen activity on the cover showing the mirrored inner screen.
- * Touch is replayed on display 0 through Shizuku (see [MirrorInput]).
+ * Full-screen activity on the cover showing the selected source.
+ * Touch is replayed on the selected display through Shizuku (see [MirrorInput]).
  */
 class MirrorActivity : ComponentActivity(), TextureView.SurfaceTextureListener {
 

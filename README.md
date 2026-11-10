@@ -4,6 +4,7 @@ This project adapts [OpenCover 0.2](https://github.com/Shmubbier/OpenCover/relea
 
 - Choose a fixed angle for the whole cover screen or enable Auto-rotate in OpenCover's quick settings.
 - The gesture bar follows the bottom of the rotated content. At 180°, OpenCover keeps controls clear of the camera cutout and accepts a pull-down next to the camera.
+- Mirror can select an existing desktop display; capture and touch use the same source. See [desktop mirror notes](OpenCover-0.2/docs/desktop-mirror.md).
 - Rotation requires Shizuku. The app uses a separate Android package, `dev.opencover.globalrotation`.
 
 From the source folder, build and run the unit tests with JDK 21 and Android SDK 37:

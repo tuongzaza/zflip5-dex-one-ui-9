@@ -17,11 +17,12 @@ object MirrorInput {
     private var out: Writer? = null
 
     /** Starts the touch server; call when mirroring starts. */
-    fun start(ctx: Context) {
+    fun start(ctx: Context, displayId: Int = 0) {
+        require(displayId >= 0)
         val apk = ctx.applicationInfo.sourceDir
         worker.execute {
             if (out != null) return@execute
-            val p = ShizukuShell.spawn("sh", "-c", "CLASSPATH='$apk' exec app_process / ${TouchServer::class.java.name}") ?: return@execute
+            val p = ShizukuShell.spawn("sh", "-c", "CLASSPATH='$apk' exec app_process / ${TouchServer::class.java.name} $displayId") ?: return@execute
             val ready = runCatching { p.inputStream.bufferedReader().readLine() }.getOrNull()
             if (ready != "ready") {
                 Log.w("OpenCoverMirror", "touch server didn't start: $ready ${runCatching { p.errorStream.bufferedReader().readText() }.getOrNull()}")

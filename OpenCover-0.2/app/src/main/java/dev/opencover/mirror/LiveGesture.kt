@@ -13,6 +13,8 @@ import dev.opencover.watcher.CoverAccessibility
  * lifts. Each piece is sent once the last one has been played. Main thread only. Same idea as Z Flip Cover Power.
  */
 object LiveGesture {
+    var displayId = Display.DEFAULT_DISPLAY
+
     private var stroke: GestureDescription.StrokeDescription? = null
     private var lastX = 0f
     private var lastY = 0f
@@ -50,7 +52,7 @@ object LiveGesture {
         else stroke?.continueStroke(path, 0, ms, willContinue) ?: return
         stroke = s
         busy = true
-        val g = GestureDescription.Builder().addStroke(s).setDisplayId(Display.DEFAULT_DISPLAY).build()
+        val g = GestureDescription.Builder().addStroke(s).setDisplayId(displayId).build()
         service.dispatchGesture(g, object : AccessibilityService.GestureResultCallback() {
             override fun onCompleted(d: GestureDescription) { busy = false; if (willContinue) next() else stroke = null }
             override fun onCancelled(d: GestureDescription) { busy = false; stroke = null }
