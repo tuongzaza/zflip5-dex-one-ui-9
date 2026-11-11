@@ -1,13 +1,14 @@
 import java.util.Properties
 
 plugins {
+    id("org.jetbrains.kotlin.android")
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
     namespace = "dev.opencover"
-    compileSdk = 37
+    compileSdk = 36
     defaultConfig {
         applicationId = "dev.opencover.globalrotation"
         minSdk = 34
@@ -30,12 +31,14 @@ android {
         // ponytail: no R8. Much of OpenCover reaches hidden APIs by reflection; shrinking would need keep rules for each.
         release { signingConfig = signingConfigs.findByName("release") }
     }
+    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+    kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; aidl = true; buildConfig = true }
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
-    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation(platform("androidx.compose:compose-bom:2025.09.00"))
+    implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.media:media:1.7.1") // MediaControllerCompat: shuffle and repeat
@@ -43,5 +46,5 @@ dependencies {
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("androidx.compose.material:material-icons-extended:1.7.8") // quick settings tile icons
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20260814")
+    testImplementation("org.json:json:20250517")
 }

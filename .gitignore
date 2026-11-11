@@ -6,3 +6,6 @@
 *.keystore
 keystore.properties
 local.properties
+
+**/__pycache__/
+*.py[cod]

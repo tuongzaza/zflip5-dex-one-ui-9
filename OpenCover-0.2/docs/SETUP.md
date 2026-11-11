@@ -10,7 +10,7 @@ For the Galaxy Z Flip 5 on One UI 8 (Android 16). Most of it is done once; step 
 ## 1. Install
 Open the APK on the phone, or from the computer:
 ```
-adb install OpenCover-0.1.apk
+adb install -r OpenCover-0.2.6.apk
 ```
 A release APK and a self-built debug APK are signed with different keys. To switch from one to the other, uninstall first; this resets OpenCover's settings.
 
@@ -36,7 +36,7 @@ OpenCover's accessibility service never reads screen content. See [Why Accessibi
 
 ## 4. Let every app open on the cover (computer, once)
 ```
-adb shell pm grant dev.opencover android.permission.WRITE_SECURE_SETTINGS
+adb shell pm grant dev.opencover.globalrotation android.permission.WRITE_SECURE_SETTINGS
 ```
 Samsung only opens apps that are on Good Lock MultiStar's cover list on the cover. With this permission OpenCover adds every installed app to that list, and each new app as you install it, so no app needs Shizuku to open on the cover. It also lets OpenCover turn itself back on after a banking app (Settings > Banking apps).
 
