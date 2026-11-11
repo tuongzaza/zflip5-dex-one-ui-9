@@ -58,14 +58,16 @@ class PhoneModeActivity : Activity() {
         setContentView(root)
         root.requestApplyInsets()
     }
-    override fun onPause() { pad?.cancelGestures();super.onPause() }
+    override fun onResume() { super.onResume(); visible = true }
+    override fun onPause() { visible = false;pad?.cancelGestures();super.onPause() }
     override fun onDestroy() { if (current === this) current = null;super.onDestroy() }
     @Deprecated("Phone mode back")
     override fun onBackPressed() { Desk.phoneMode(this, false);super.onBackPressed() }
 
     companion object {
         var current: PhoneModeActivity? = null;private set
-        private fun phoneDisplay(ctx: Context): Int {
+        var visible = false;private set
+        internal fun phoneDisplay(ctx: Context): Int {
             val dm = ctx.getSystemService(DisplayManager::class.java)
             return if (dm.getDisplay(Display.DEFAULT_DISPLAY)?.state == Display.STATE_ON) Display.DEFAULT_DISPLAY else COVER_DISPLAY
         }

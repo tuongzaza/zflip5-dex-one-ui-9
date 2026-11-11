@@ -35,6 +35,7 @@ object Desk {
     private var cursorView: android.view.View? = null
     private var pointer: DeskPointer? = null
     private var taskbar: DeskTaskbar? = null
+    private var phoneButton: PhoneModeButton? = null
     private const val HELPER_VERSION = 18
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
@@ -162,7 +163,11 @@ object Desk {
             Log.i(TAG, if (ok) "mouse on the desk" else "no mouse found")
             taskbar?.stop()
             taskbar = DeskTaskbar(ctx, id).also { it.start() }
-            main.post { PhoneModeActivity.open(ctx) }
+            main.post {
+                phoneButton?.stop()
+                service?.let { phoneButton = PhoneModeButton(it).also { button -> button.start() } }
+                PhoneModeActivity.open(ctx)
+            }
             // Gaming mode on plug-in: the game app once the desktop has settled.
             if (DeskGame.auto(ctx) && DeskGame.app(ctx) != null) main.postDelayed({ if (displayId == id) Log.i(TAG, DeskGame.play(ctx)) }, 3_000)
         }
@@ -266,6 +271,7 @@ object Desk {
 
     fun stop() {
         val v = view ?: return
+        phoneButton?.stop(); phoneButton = null
         PhoneModeActivity.current?.finish()
         restoreWallpaper(v.context)
         DeskGame.leave(background = false)

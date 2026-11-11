@@ -65,11 +65,6 @@ class DeskTaskbar(ctx: Context, displayId: Int) {
     private fun show(windows: List<Desk.Window>) {
         shown = windows
         row.removeAllViews()
-        row.addView(android.widget.Button(wctx).apply {
-            text = "▧"; textSize = 20f
-            contentDescription = "Điện thoại / Bàn di chuột"
-            setOnClickListener { PhoneModeActivity.open(wctx) }
-        }, LinearLayout.LayoutParams(CELL_PX, BAR_PX))
         val pm = wctx.packageManager
         windows.forEach { w ->
             row.addView(FrameLayout(wctx).apply {
