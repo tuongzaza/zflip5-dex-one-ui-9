@@ -35,7 +35,6 @@ object Desk {
     private var cursorView: android.view.View? = null
     private var pointer: DeskPointer? = null
     private var taskbar: DeskTaskbar? = null
-    private var phoneButton: PhoneModeButton? = null
     private const val HELPER_VERSION = 18
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
@@ -164,8 +163,6 @@ object Desk {
             taskbar?.stop()
             taskbar = DeskTaskbar(ctx, id).also { it.start() }
             main.post {
-                phoneButton?.stop()
-                service?.let { phoneButton = PhoneModeButton(it).also { button -> button.start() } }
                 PhoneModeActivity.open(ctx)
             }
             // Gaming mode on plug-in: the game app once the desktop has settled.
@@ -271,7 +268,6 @@ object Desk {
 
     fun stop() {
         val v = view ?: return
-        phoneButton?.stop(); phoneButton = null
         PhoneModeActivity.current?.finish()
         restoreWallpaper(v.context)
         DeskGame.leave(background = false)

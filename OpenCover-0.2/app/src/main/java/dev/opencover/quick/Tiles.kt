@@ -9,6 +9,7 @@ enum class Need { NONE, SHIZUKU, SECURE_SETTINGS, NOTIFICATION_ACCESS, LATER }
 
 /** Declaration order is the default order. Ids (names) are saved, so never rename one. */
 enum class Tile(val label: String, val need: Need) {
+    PHONE_MODE("Chế độ điện thoại", Need.NONE),
     WIFI("Wi-Fi", Need.SHIZUKU),
     BLUETOOTH("Bluetooth", Need.SHIZUKU),
     FLASHLIGHT("Flashlight", Need.NONE),
@@ -70,7 +71,14 @@ fun usable(need: Need, has: Set<Need>) = need == Need.NONE || need != Need.LATER
 
 object QuickPrefs {
     private fun prefs(ctx: Context) = ctx.getSharedPreferences("quick", Context.MODE_PRIVATE)
-    fun tiles(ctx: Context) = parseTiles(prefs(ctx).getString("tiles", null))
+    fun tiles(ctx: Context): List<Tile> {
+        val p = prefs(ctx)
+        val saved = p.getString("tiles", null)
+        if (p.getBoolean("phone_mode_tile_added", false)) return parseTiles(saved)
+        val tiles = listOf(Tile.PHONE_MODE) + (parseTiles(saved) - Tile.PHONE_MODE)
+        p.edit().putString("tiles", formatTiles(tiles)).putBoolean("phone_mode_tile_added", true).apply()
+        return tiles
+    }
     fun setTiles(ctx: Context, tiles: List<Tile>) = prefs(ctx).edit().putString("tiles", formatTiles(tiles)).apply()
 }
 
@@ -87,5 +95,5 @@ fun settingsAction(tile: Tile): String? = when (tile) {
     Tile.NFC -> Settings.ACTION_NFC_SETTINGS
     Tile.DARK_MODE -> Settings.ACTION_DISPLAY_SETTINGS
     Tile.HOTSPOT -> "android.settings.TETHER_SETTINGS"
-    Tile.FLASHLIGHT, Tile.ROTATION, Tile.KEEP_AWAKE, Tile.MIRROR -> null
+    Tile.FLASHLIGHT, Tile.ROTATION, Tile.KEEP_AWAKE, Tile.MIRROR, Tile.PHONE_MODE -> null
 }

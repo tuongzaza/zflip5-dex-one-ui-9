@@ -119,6 +119,14 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density">
             <meta-data android:name="com.samsung.android.multiwindow.show_on_cover" android:value="true" />
         </activity>
+        <service android:name=".desk.PhoneModeTileService"
+            android:exported="true" android:label="Chế độ điện thoại"
+            android:icon="@drawable/ic_phone_mode"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
         <service
             android:name=".mirror.MirrorService"
             android:exported="false"

@@ -234,6 +234,7 @@ private fun TileButton(
 }
 
 private fun Tile.icon(): ImageVector = when (this) {
+    Tile.PHONE_MODE -> Icons.Filled.TouchApp
     Tile.WIFI -> Icons.Filled.Wifi
     Tile.BLUETOOTH -> Icons.Filled.Bluetooth
     Tile.FLASHLIGHT -> Icons.Filled.FlashlightOn
