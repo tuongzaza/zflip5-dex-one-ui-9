@@ -43,4 +43,6 @@ interface IDesk {
 
     /** Makes [displayId] the focused display (typing and new launches go there). */
     void focusDisplay(int displayId) = 13;
+    /** Relative touchpad input, ordered and non-blocking for the phone UI. */
+    oneway void touchpad(float dx, float dy, int buttons, float scroll) = 14;
 }

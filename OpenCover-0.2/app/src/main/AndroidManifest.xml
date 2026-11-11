@@ -69,6 +69,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".desk.PhoneModeActivity" android:exported="true"
+            android:label="Điện thoại / Bàn di chuột" android:excludeFromRecents="true" android:launchMode="singleTask"
+            android:resizeableActivity="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".notify.ReplyActivity"
             android:taskAffinity=""

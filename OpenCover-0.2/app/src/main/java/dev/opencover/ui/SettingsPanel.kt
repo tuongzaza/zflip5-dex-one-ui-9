@@ -178,9 +178,9 @@ private fun ExperimentalPanel(topEdge: Boolean, onTopEdge: (Boolean) -> Unit, on
                 android.widget.Toast.makeText(ctx, msg, android.widget.Toast.LENGTH_LONG).show()
             }
             if (desk) {
-                var dimCover by remember { mutableStateOf(dev.opencover.desk.Desk.dimCover(ctx)) }
-                SwitchRow("Cover rests while on a monitor", "The cover shows OpenCover's AOD (black with the AOD off) while the desktop is in use; tap it to use it, and it rests again after 30 s.",
-                    dimCover) { dimCover = it; dev.opencover.desk.Desk.setDimCover(ctx, it) }
+                NavRow(null, "Điện thoại / Bàn di chuột", "Dùng điện thoại bình thường hoặc điều khiển con trỏ trên màn hình ngoài") {
+                    dev.opencover.desk.PhoneModeActivity.open(ctx)
+                }
                 var wall by remember { mutableStateOf(dev.opencover.desk.Desk.wallpaper(ctx)) }
                 SwitchRow("OpenCover background on the monitor", "Home's background, or one of its own, fills the desktop, animated ones too. The phone's wallpaper goes back when the desktop stops.",
                     wall) { wall = it; dev.opencover.desk.Desk.setWallpaper(ctx, it); dev.opencover.desk.Desk.backgroundChanged() }

@@ -104,12 +104,10 @@ class DeskService(context: Context) : IDesk.Stub() {
     override fun startMouse(displayId: Int, width: Int, height: Int, cursor: IDeskCursor): Boolean {
         stopMouse()
         val m = DeskMouse(displayId, width, height, cursor) { runCatching { focus(displayId) } }
-        if (!m.start()) return false
-        mouse = m
+        mouse = m // keep the pointer available to the phone even without a USB mouse
         deskId = displayId
-        // The keyboard follows the focused display: make it the desk.
-        runCatching { focus(displayId) }
-        return true
+        runCatching { cursor.moved(width / 2f, height / 2f, false) }
+        return m.start()
     }
 
     private var deskId = -1
@@ -120,7 +118,12 @@ class DeskService(context: Context) : IDesk.Stub() {
 
     override fun setLocked(locked: Boolean) {
         mouse?.locked = locked
-        if (!locked) runCatching { focus(deskId) } // typing goes back to the desk's apps
+        // Unlocking must leave keyboard focus with the phone until the user clicks the desktop.
+    }
+
+    override fun touchpad(dx: Float, dy: Float, buttons: Int, scroll: Float) {
+        if (deskId < 0 || display == null) return
+        mouse?.touchpad(dx, dy, buttons, scroll)
     }
 
     override fun stopMouse() {

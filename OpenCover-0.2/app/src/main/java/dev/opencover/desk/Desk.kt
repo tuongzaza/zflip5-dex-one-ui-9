@@ -35,7 +35,7 @@ object Desk {
     private var cursorView: android.view.View? = null
     private var pointer: DeskPointer? = null
     private var taskbar: DeskTaskbar? = null
-    private const val HELPER_VERSION = 17
+    private const val HELPER_VERSION = 18
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
     // The helper says where the mouse is; the cursor is drawn here, over the desk (the system draws none there).
@@ -81,6 +81,7 @@ object Desk {
         val monitor = monitor(service)
         if (running && (monitor == null || monitor.displayId != monitorId)) stop()
         if (!running && monitor != null && wanted(service) && ShizukuShell.allowed()) Log.i(TAG, start(service))
+        PhoneModeActivity.moveIfNeeded(service)
     }
 
     /** Covers the monitor and shows the desk there (Samsung's DeX desktop), opening [open] on it if given. */
@@ -120,7 +121,7 @@ object Desk {
         return runCatching {
             val wm = wctx.getSystemService(WindowManager::class.java)
             wm.addView(frame, lp); view = sv; root = frame
-            if (dimCover(service)) dim = CoverDim(service).also { it.start() }
+            // Phone mode stays usable at its normal scale; touchpad is an explicit choice.
             // The cursor in a small window of its own above the desk (the desk's picture would cover a view in its window).
             val arrow = android.widget.ImageView(wctx)
             wm.addView(arrow, WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
@@ -153,7 +154,6 @@ object Desk {
     private fun make(ctx: Context, surface: Surface, w: Int, h: Int, open: String?) {
         // Before the display exists, so it starts with it.
         useOurWallpaper(ctx, w, h)
-        matchInnerDensity(ctx, on = true)
         val id = runCatching { helper?.create(surface, w, h, DPI) }.getOrNull() ?: -1
         displayId = id
         Log.i(TAG, "desk display $id (${w}x$h)")
@@ -162,6 +162,7 @@ object Desk {
             Log.i(TAG, if (ok) "mouse on the desk" else "no mouse found")
             taskbar?.stop()
             taskbar = DeskTaskbar(ctx, id).also { it.start() }
+            main.post { PhoneModeActivity.open(ctx) }
             // Gaming mode on plug-in: the game app once the desktop has settled.
             if (DeskGame.auto(ctx) && DeskGame.app(ctx) != null) main.postDelayed({ if (displayId == id) Log.i(TAG, DeskGame.play(ctx)) }, 3_000)
         }
@@ -243,6 +244,16 @@ object Desk {
 
     fun post(block: () -> Unit) { main.post(block) }
 
+    fun phoneTouchpad(ctx: Context) = ctx.getSharedPreferences("desk", Context.MODE_PRIVATE).getBoolean("phone_touchpad", false)
+    fun phoneMode(ctx: Context, touchpad: Boolean) {
+        runCatching { helper?.touchpad(0f, 0f, 0, 0f) }
+        ctx.getSharedPreferences("desk", Context.MODE_PRIVATE).edit().putBoolean("phone_touchpad", touchpad).apply()
+    }
+    fun touchpad(dx: Float = 0f, dy: Float = 0f, buttons: Int = 0, scroll: Float = 0f) {
+        val ctx = service ?: return
+        if (phoneTouchpad(ctx) && !locked) runCatching { helper?.touchpad(dx, dy, buttons, scroll) }
+    }
+
     private fun restoreWallpaper(ctx: Context) {
         val prefs = ctx.getSharedPreferences("desk", Context.MODE_PRIVATE)
         val previous = prefs.getString("previous_wallpaper", null) ?: return
@@ -253,24 +264,9 @@ object Desk {
     private const val MAIN_HOME = 5
     private const val IMAGE_WALLPAPER = "com.android.systemui/com.android.systemui.wallpapers.ImageWallpaper"
 
-    /**
-     * Apps that take their scale from the phone's main screen (React Native ones: Discord and others) lay out at its
-     * 480 dpi inside the desk's 160: tiny text, huge badges. The inner screen is off while folded, so it takes the desk's
-     * density while the desk runs; put back in [stop], or by MirrorEnv.recover if OpenCover died first.
-     */
-    // ponytail: unfolding while the desk runs shows the inner screen at desk density; restore on unfold if that matters.
-    private fun matchInnerDensity(ctx: Context, on: Boolean) {
-        val prefs = dev.opencover.phone.PhonePrefs(ctx.applicationContext)
-        if (on) prefs.innerResetPending = true
-        Thread {
-            val ok = ShizukuShell.run("wm", "density", if (on) "$DPI" else "reset", "-d", "${Display.DEFAULT_DISPLAY}")
-            if (!on && ok) prefs.innerResetPending = false
-        }.start()
-    }
-
     fun stop() {
         val v = view ?: return
-        matchInnerDensity(v.context, on = false)
+        PhoneModeActivity.current?.finish()
         restoreWallpaper(v.context)
         DeskGame.leave(background = false)
         taskbar?.stop(); taskbar = null

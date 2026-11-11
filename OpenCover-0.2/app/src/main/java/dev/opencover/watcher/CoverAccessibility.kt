@@ -125,7 +125,10 @@ class CoverAccessibility : AccessibilityService() {
     /** The cover turned (an app's rotation, or an app switching between landscape and portrait): the bar moves too. */
     private val coverTurned = object : android.hardware.display.DisplayManager.DisplayListener {
         override fun onDisplayChanged(id: Int) {
-            if (id == COVER_DISPLAY || id == Display.DEFAULT_DISPLAY) syncAutoRotation()
+            if (id == COVER_DISPLAY || id == Display.DEFAULT_DISPLAY) {
+                syncAutoRotation()
+                dev.opencover.desk.PhoneModeActivity.moveIfNeeded(this@CoverAccessibility)
+            }
             if (id == COVER_DISPLAY) updateNavBar()
         }
         // A monitor plugged in or out: the desk follows (after a moment, so the monitor has settled).

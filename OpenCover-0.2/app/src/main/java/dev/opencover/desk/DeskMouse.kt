@@ -23,6 +23,16 @@ class DeskMouse(
     @Volatile private var running = true
     /** The phone is locked: the pointer still moves, but nothing on the desk is clicked or scrolled. */
     @Volatile var locked = false
+        set(value) {
+            synchronized(this) {
+                if (value && buttons != 0) {
+                    send(MotionEvent.ACTION_CANCEL)
+                    buttons = 0
+                    runCatching { cursor.moved(x, y, false) }
+                }
+                field = value
+            }
+        }
     private var stream: FileInputStream? = null
     private var x = w / 2f
     private var y = h / 2f
@@ -74,7 +84,13 @@ class DeskMouse(
         runCatching { input.close() }
     }
 
+    fun touchpad(dx: Float, dy: Float, pressed: Int, scroll: Float) {
+        if (!running || !dx.isFinite() || !dy.isFinite() || !scroll.isFinite() || pressed !in 0..2) return
+        frame(dx.toInt().coerceIn(-4096, 4096), dy.toInt().coerceIn(-4096, 4096), scroll.coerceIn(-20f, 20f), pressed)
+    }
+
     /** One report from the mouse: move, then buttons, then wheel. */
+    @Synchronized
     private fun frame(dx: Int, dy: Int, wheel: Float, pressed: Int) {
         if (dx != 0 || dy != 0) {
             x = (x + dx).coerceIn(0f, w - 1f); y = (y + dy).coerceIn(0f, h - 1f)

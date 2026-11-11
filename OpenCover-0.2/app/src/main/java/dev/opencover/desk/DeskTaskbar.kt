@@ -37,6 +37,7 @@ class DeskTaskbar(ctx: Context, displayId: Int) {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT).apply { gravity = Gravity.BOTTOM or Gravity.START; x = START_PX }
         added = runCatching { wm.addView(row, lp) }.isSuccess
+        show(emptyList())
         bg.post(poll)
     }
 
@@ -64,6 +65,11 @@ class DeskTaskbar(ctx: Context, displayId: Int) {
     private fun show(windows: List<Desk.Window>) {
         shown = windows
         row.removeAllViews()
+        row.addView(android.widget.Button(wctx).apply {
+            text = "▧"; textSize = 20f
+            contentDescription = "Điện thoại / Bàn di chuột"
+            setOnClickListener { PhoneModeActivity.open(wctx) }
+        }, LinearLayout.LayoutParams(CELL_PX, BAR_PX))
         val pm = wctx.packageManager
         windows.forEach { w ->
             row.addView(FrameLayout(wctx).apply {
