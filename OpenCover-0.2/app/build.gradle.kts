@@ -12,8 +12,8 @@ android {
         applicationId = "dev.opencover.globalrotation"
         minSdk = 34
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.2.5"
+        versionCode = 8
+        versionName = "0.2.6"
     }
     // Release signing from keystore.properties (not in git); without it the release build is left unsigned.
     val keys = rootProject.file("keystore.properties").takeIf { it.exists() }

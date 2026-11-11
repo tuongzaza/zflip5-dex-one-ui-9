@@ -223,6 +223,7 @@ class CoverActivity : ComponentActivity() {
         HomePrefs.load(this)
         LockPrefs.load(this); Weather.load(this)
         if (intent.getBooleanExtra(EXTRA_QUICK_SETTINGS, false)) requestQuickSettings()
+        if (intent.getBooleanExtra(EXTRA_WALLPAPER_CHOICES, false)) window.decorView.post { showWallpaperChoices() }
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 resumeTick // re-read permissions every time we come back from Settings
@@ -261,6 +262,7 @@ class CoverActivity : ComponentActivity() {
                         cropping = null
                         if (!Wallpaper.save(this@CoverActivity, job.file, job.slot, crop))
                             Toast.makeText(this@CoverActivity, "Couldn't use that image", Toast.LENGTH_SHORT).show()
+                        else if (job.slot == dev.opencover.home.Slot.HOME) dev.opencover.desk.Desk.backgroundChanged()
                     }, onCancel = { cropping = null; if (job.picked) job.file.delete() })
                 }
                 }
@@ -311,6 +313,7 @@ class CoverActivity : ComponentActivity() {
                 return
             }
         } else dev.opencover.desk.DeskBackground.setCrop(app, crop)
+        dev.opencover.desk.Desk.setWallpaper(app, true)
         // An animation's video takes a few seconds to make; the monitor shows the new background once it's ready.
         Thread {
             dev.opencover.desk.DeskBackground.makeVideo(app)
@@ -479,8 +482,19 @@ class CoverActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.getBooleanExtra(EXTRA_QUICK_SETTINGS, false)) requestQuickSettings()
+        if (intent.getBooleanExtra(EXTRA_WALLPAPER_CHOICES, false)) showWallpaperChoices()
+        else if (intent.getBooleanExtra(EXTRA_QUICK_SETTINGS, false)) requestQuickSettings()
         else homeRequests++
+    }
+
+    private fun showWallpaperChoices() {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Đổi hình nền")
+            .setItems(arrayOf("Điện thoại (OpenCover)", "Desktop / DeX")) { _, which ->
+                if (which == 0) pickBackground(dev.opencover.home.Slot.HOME)
+                else pickDeskBackground()
+            }
+            .setNegativeButton("Hủy", null).show()
     }
 
     private fun pickWallpaper() = pickBackground(dev.opencover.home.Slot.HOME)
@@ -543,6 +557,7 @@ class CoverActivity : ComponentActivity() {
     companion object {
         const val EXTRA_UNLOCKED = "unlocked"
         const val EXTRA_QUICK_SETTINGS = "quick_settings"
+        const val EXTRA_WALLPAPER_CHOICES = "wallpaper_choices"
         /** The launcher while it's in front (resumed), else null. */
         var current: CoverActivity? = null
             private set

@@ -97,6 +97,7 @@ object QuickState {
     private fun read(ctx: Context, tile: Tile): Boolean? {
         val r = ctx.contentResolver
         return when (tile) {
+            Tile.WALLPAPER -> false
             Tile.PHONE_MODE -> dev.opencover.desk.Desk.running && dev.opencover.desk.Desk.phoneTouchpad(ctx)
             Tile.WIFI -> ctx.getSystemService(WifiManager::class.java).isWifiEnabled
             Tile.BLUETOOTH -> Settings.Global.getInt(r, Settings.Global.BLUETOOTH_ON, 0) != 0
@@ -157,6 +158,11 @@ object QuickState {
                 Tile.BATTERY_SAVER -> Settings.Global.putInt(r, "low_power", if (on) 0 else 1) // the system follows it
                 Tile.DARK_MODE -> ShizukuShell.run("cmd", "uimode", "night", if (on) "no" else "yes")
                 Tile.FLASHLIGHT -> { ctx.getSystemService(CameraManager::class.java).setTorchMode(flashId!!, !on); true }
+                Tile.WALLPAPER -> {
+                    AppLauncher.start(ctx, Intent(ctx, dev.opencover.ui.CoverActivity::class.java)
+                        .putExtra(dev.opencover.ui.CoverActivity.EXTRA_WALLPAPER_CHOICES, true))
+                    true
+                }
                 Tile.PHONE_MODE -> { dev.opencover.desk.PhoneModeActivity.open(ctx); true }
                 Tile.ROTATION -> false // handled above
                 Tile.LOCATION -> Settings.Secure.putInt(r, Settings.Secure.LOCATION_MODE,

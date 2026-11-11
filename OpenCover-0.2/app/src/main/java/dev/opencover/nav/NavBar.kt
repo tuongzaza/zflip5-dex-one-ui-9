@@ -204,7 +204,8 @@ object NavBar {
         var over = over
         // Turned, with the system bar not on the camera-lip edge (Samsung's gestures): a black spacer along that edge
         // instead, holding the bar where it is upright, so nothing important sits behind the lip.
-        val followContent = PhonePrefs(service).hasCoverRotation && cover.rotation != 0
+        // Samsung can leave its bar at the opposite edge even when rotation returns to zero.
+        val followContent = PhonePrefs(service).hasCoverRotation
         val mask = over.takeIf { followContent && rot != 0 }
         val quickSettingsEdge = mask != null && rot == 2
         val spacer = !followContent && cover.rotation != 0 && rot != cover.rotation

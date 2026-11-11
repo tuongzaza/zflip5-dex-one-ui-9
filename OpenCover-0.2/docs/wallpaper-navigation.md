@@ -1,0 +1,9 @@
+# Wallpaper and cover navigation — 0.2.6
+
+Added Hình nền to the first OpenCover swipe-down Quick Settings page. It opens a choice for Điện thoại (OpenCover) or Desktop / DeX, using existing photo import/crop/save flows. Migration adds this entry once while preserving other tile order and subsequent manual removals. The phone target changes OpenCover home on the cover screen, not Samsung's separate inner-screen/lock-screen wallpaper settings.
+
+Desktop background selection now works when the system is already using ImageWallpaper: removed an early return which skipped applying the selected picture in that state. Selecting a desktop image also enables the OpenCover background setting. Saving the OpenCover home image refreshes the desktop when it borrows that source; when a separate desktop image exists, that source continues to take precedence.
+
+Cover navigation follows content whenever cover rotation is configured, including when display rotation returns to zero. Samsung had left its navigation controls at the top at rotation0; previously OpenCover followed the stale bar there. The replacement now sits at the logical bottom and masks the old bar. Existing gesture coordinate transforms remain in use.
+
+Validation: build succeeded and all 295 unit tests passed. Real cover screenshot before showed top navigation; after it showed the pill at the bottom in the same rotation0 state. Quick Settings tile opens the choice; desktop choice opens Android Photo Picker. User selected/cropped a desktop image and confirmed the external wallpaper changed. Log confirmed background applied from desk_wallpaper.gif while previous component was ImageWallpaper. User then confirmed the phone image changed separately while the desktop retained its own image, and the navigation bar followed correctly when physically rotating the phone. No device DPI changes.

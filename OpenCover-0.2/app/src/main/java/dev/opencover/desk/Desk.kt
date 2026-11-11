@@ -190,7 +190,6 @@ object Desk {
         // Read by the helper: apps aren't told which live wallpaper is set.
         val now = runCatching { helper?.wallpaper(MAIN_HOME) }.getOrNull() ?: return
         val saved = prefs.getString("previous_wallpaper", null)
-        if (saved == null && now == IMAGE_WALLPAPER) return
         if (saved == null) prefs.edit().putString("previous_wallpaper", now).apply() // else a crash left ours: keep the saved one
         // Animated: the wallpaper is the key colour the compositor swaps for the video.
         val picture = if (compositor?.animated == true) android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
