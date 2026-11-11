@@ -100,6 +100,7 @@ class DeskService(context: Context) : IDesk.Stub() {
     }
 
     private var mouse: DeskMouse? = null
+    private var remoteCursor: DeskRemoteCursor? = null
 
     override fun startMouse(displayId: Int, width: Int, height: Int, cursor: IDeskCursor): Boolean {
         stopMouse()
@@ -107,6 +108,7 @@ class DeskService(context: Context) : IDesk.Stub() {
         mouse = m // keep the pointer available to the phone even without a USB mouse
         deskId = displayId
         runCatching { cursor.moved(width / 2f, height / 2f, false) }
+        remoteCursor = DeskRemoteCursor(displayId, width, height, cursor).also { it.start() }
         return m.start()
     }
 
@@ -127,6 +129,7 @@ class DeskService(context: Context) : IDesk.Stub() {
     }
 
     override fun stopMouse() {
+        remoteCursor?.stop(); remoteCursor = null
         mouse?.stop()
         mouse = null
     }
