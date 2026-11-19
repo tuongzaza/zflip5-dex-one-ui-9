@@ -32,7 +32,9 @@ class DeskMouse(
                 field = value
             }
         }
-    @Volatile private var stream: FileInputStream? = null
+    private val readers = mutableMapOf<String, Reader>()
+    private var nextSource = 1 // source 0 is the phone touchpad
+    private val sourceButtons = MouseButtons()
     private var x = w / 2f
     private var y = h / 2f
     private var buttons = 0
@@ -45,48 +47,86 @@ class DeskMouse(
     private val inject by lazy { im.javaClass.getMethod("injectInputEvent", InputEvent::class.java, Int::class.javaPrimitiveType) }
     private val setDisplay by lazy { MotionEvent::class.java.getMethod("setDisplayId", Int::class.javaPrimitiveType) }
 
-    /** Keep watching even if Bluetooth is connected after the desktop starts. */
+    /** Watch all mice: some Bluetooth keyboards expose an additional mouse interface. */
     fun start(): Boolean {
         Thread({
             while (running) {
-                val path = findMouse()
-                if (running && path != null) run(path)
+                val paths = findMice()
+                synchronized(readers) {
+                    if (paths != null) {
+                        val gone = readers.filter { (path, reader) -> path !in paths || reader.finished }
+                        gone.forEach { (path, reader) -> reader.close(); readers.remove(path) }
+                        if (running) for (path in paths) if (path !in readers) {
+                            val reader = Reader(path, nextSource++)
+                            readers[path] = reader
+                            Thread({ reader.read() }, "desk-mouse-${reader.source}").start()
+                        }
+                    }
+                }
                 if (running) Thread.sleep(1_000)
             }
-        }, "desk-mouse").start()
+        }, "desk-mice").start()
         return true
     }
 
     fun stop() {
         running = false
-        runCatching { stream?.close() } // closing also lets go of the grab
+        synchronized(readers) {
+            readers.values.forEach { it.close() }
+            readers.clear()
+        }
     }
 
-    private fun run(path: String) {
-        val input = runCatching { FileInputStream(path) }.getOrElse { Log.w(TAG, "can't open $path", it); return }
-        stream = input
-        if (!running) { input.close(); return }
-        grab(input)
-        Log.i(TAG, "reading desktop mouse $path")
-        runCatching { cursor.moved(x, y, false) }
-        val buf = ByteArray(EVENT_SIZE)
-        var dx = 0; var dy = 0; var wheel = 0f; var pressed = buttons
-        while (running) {
-            if (runCatching { readFully(input, buf) }.getOrDefault(false) != true) break
-            val e = ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN)
-            val type = e.getShort(16).toInt(); val code = e.getShort(18).toInt(); val value = e.getInt(20)
-            when (type) {
-                EV_REL -> when (code) { REL_X -> dx += value; REL_Y -> dy += value; REL_WHEEL -> wheel += value }
-                EV_KEY -> { val bit = buttonBit(code); if (bit != 0) pressed = if (value != 0) pressed or bit else pressed and bit.inv() }
-                EV_SYN -> { frame(dx, dy, wheel, pressed); dx = 0; dy = 0; wheel = 0f }
+    private inner class Reader(val path: String, val source: Int) {
+        @Volatile var finished = false; private set
+        @Volatile private var active = true
+        @Volatile private var stream: FileInputStream? = null
+
+        fun close() {
+            active = false
+            runCatching { stream?.close() } // closes only this reader's grab
+        }
+
+        fun read() {
+            try {
+                val input = FileInputStream(path)
+                stream = input
+                input.use {
+                    if (!running || !active) return
+                    if (!grab(input)) return
+                    Log.i(TAG, "reading desktop mouse $path")
+                    val buf = ByteArray(EVENT_SIZE)
+                    var dx = 0; var dy = 0; var wheel = 0f; var pressed = 0
+                    while (running && active && readFully(input, buf)) {
+                        val e = ByteBuffer.wrap(buf).order(ByteOrder.LITTLE_ENDIAN)
+                        val type = e.getShort(16).toInt(); val code = e.getShort(18).toInt(); val value = e.getInt(20)
+                        when (type) {
+                            EV_REL -> when (code) { REL_X -> dx += value; REL_Y -> dy += value; REL_WHEEL -> wheel += value }
+                            EV_KEY -> { val bit = buttonBit(code); if (bit != 0) pressed = if (value != 0) pressed or bit else pressed and bit.inv() }
+                            EV_SYN -> if (code == 0) {
+                                if (running && active) sourceFrame(source, dx, dy, wheel, pressed)
+                                dx = 0; dy = 0; wheel = 0f
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                if (running && active) Log.w(TAG, "mouse disconnected: $path", e)
+            } finally {
+                if (running) sourceFrame(source, 0, 0, 0f, 0)
+                finished = true
             }
         }
-        runCatching { input.close() }
+    }
+
+    @Synchronized
+    private fun sourceFrame(source: Int, dx: Int, dy: Int, wheel: Float, pressed: Int) {
+        if (running) frame(dx, dy, wheel, sourceButtons.update(source, pressed))
     }
 
     fun touchpad(dx: Float, dy: Float, pressed: Int, scroll: Float) {
         if (!running || !dx.isFinite() || !dy.isFinite() || !scroll.isFinite() || pressed !in 0..2) return
-        frame(dx.toInt().coerceIn(-4096, 4096), dy.toInt().coerceIn(-4096, 4096), scroll.coerceIn(-20f, 20f), pressed)
+        sourceFrame(0, dx.toInt().coerceIn(-4096, 4096), dy.toInt().coerceIn(-4096, 4096), scroll.coerceIn(-20f, 20f), pressed)
     }
 
     /** One report from the mouse: move, then buttons, then wheel. */
@@ -130,10 +170,10 @@ class DeskMouse(
     }
 
     /** EVIOCGRAB: the system stops getting this device's events until it's closed. */
-    private fun grab(input: FileInputStream) = runCatching {
+    private fun grab(input: FileInputStream): Boolean = runCatching {
         val os = Class.forName("libcore.io.Libcore").getField("os").get(null)!!
         os.javaClass.getMethod("ioctlInt", java.io.FileDescriptor::class.java, Int::class.javaPrimitiveType).invoke(os, input.fd, EVIOCGRAB)
-    }.onFailure { Log.w(TAG, "couldn't grab the mouse; the system sees it too", it) }
+    }.onFailure { Log.w(TAG, "couldn't grab the mouse", it) }.isSuccess
 
     private fun buttonBit(code: Int) = when (code) {
         BTN_LEFT -> MotionEvent.BUTTON_PRIMARY
@@ -150,11 +190,11 @@ class DeskMouse(
         const val BTN_LEFT = 0x110; const val BTN_RIGHT = 0x111; const val BTN_MIDDLE = 0x112
         const val EVIOCGRAB = 0x40044590
 
-        private fun findMouse(): String? = runCatching {
+        private fun findMice(): List<String>? = runCatching {
             val process = ProcessBuilder("/system/bin/getevent", "-lp").redirectErrorStream(true).start()
             try {
                 val listing = process.inputStream.bufferedReader().use { it.readText() }
-                if (process.waitFor() == 0) MouseDevices.find(listing) else null
+                if (process.waitFor() == 0) MouseDevices.all(listing) else null
             } finally {
                 process.destroy()
             }

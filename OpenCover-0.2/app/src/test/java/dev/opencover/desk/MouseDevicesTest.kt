@@ -4,6 +4,22 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class MouseDevicesTest {
+    @Test fun keepsRealMouseWhenKeyboardAlsoExposesAMouse() {
+        val listing = """
+            add device 1: /dev/input/event14
+              name: "AULA-F99 Mouse"
+              events:
+                KEY (0001): BTN_MOUSE BTN_RIGHT
+                REL (0002): REL_X REL_Y
+            add device 2: /dev/input/event16
+              name: "AULA-SC650 Mouse"
+              events:
+                KEY (0001): BTN_MOUSE BTN_RIGHT BTN_MIDDLE
+                REL (0002): REL_X REL_Y REL_WHEEL
+        """.trimIndent()
+        assertEquals(listOf("/dev/input/event14", "/dev/input/event16"), MouseDevices.all(listing))
+    }
+
     @Test fun findsBluetoothMouseWithoutSysfsAccess() {
         val listing = """
             add device 1: /dev/input/event14
