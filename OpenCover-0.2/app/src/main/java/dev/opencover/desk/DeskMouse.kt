@@ -5,7 +5,6 @@ import android.util.Log
 import android.view.InputDevice
 import android.view.InputEvent
 import android.view.MotionEvent
-import java.io.File
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -33,7 +32,7 @@ class DeskMouse(
                 field = value
             }
         }
-    private var stream: FileInputStream? = null
+    @Volatile private var stream: FileInputStream? = null
     private var x = w / 2f
     private var y = h / 2f
     private var buttons = 0
@@ -46,14 +45,13 @@ class DeskMouse(
     private val inject by lazy { im.javaClass.getMethod("injectInputEvent", InputEvent::class.java, Int::class.javaPrimitiveType) }
     private val setDisplay by lazy { MotionEvent::class.java.getMethod("setDisplayId", Int::class.javaPrimitiveType) }
 
-    /** Starts reading; false if there's no mouse. A mouse that drops off (unplugged, a hub reset) is taken again when it's back. */
+    /** Keep watching even if Bluetooth is connected after the desktop starts. */
     fun start(): Boolean {
-        val first = findMouse() ?: return false
         Thread({
-            var path: String? = first
             while (running) {
-                if (path != null) run(path)
-                if (running) { Thread.sleep(1_000); path = findMouse() }
+                val path = findMouse()
+                if (running && path != null) run(path)
+                if (running) Thread.sleep(1_000)
             }
         }, "desk-mouse").start()
         return true
@@ -67,7 +65,9 @@ class DeskMouse(
     private fun run(path: String) {
         val input = runCatching { FileInputStream(path) }.getOrElse { Log.w(TAG, "can't open $path", it); return }
         stream = input
+        if (!running) { input.close(); return }
         grab(input)
+        Log.i(TAG, "reading desktop mouse $path")
         runCatching { cursor.moved(x, y, false) }
         val buf = ByteArray(EVENT_SIZE)
         var dx = 0; var dy = 0; var wheel = 0f; var pressed = buttons
@@ -150,10 +150,14 @@ class DeskMouse(
         const val BTN_LEFT = 0x110; const val BTN_RIGHT = 0x111; const val BTN_MIDDLE = 0x112
         const val EVIOCGRAB = 0x40044590
 
-        /** The first input device that moves along X and Y (a mouse), as /dev/input/eventN. */
-        fun findMouse(): String? = File("/sys/class/input").listFiles { f -> f.name.startsWith("event") }?.sortedBy { it.name }?.firstOrNull { ev ->
-            val rel = runCatching { File(ev, "device/capabilities/rel").readText().trim().split(' ').last().toLong(16) }.getOrDefault(0L)
-            rel and 3L == 3L
-        }?.let { "/dev/input/${it.name}" }
+        private fun findMouse(): String? = runCatching {
+            val process = ProcessBuilder("/system/bin/getevent", "-lp").redirectErrorStream(true).start()
+            try {
+                val listing = process.inputStream.bufferedReader().use { it.readText() }
+                if (process.waitFor() == 0) MouseDevices.find(listing) else null
+            } finally {
+                process.destroy()
+            }
+        }.getOrElse { Log.w(TAG, "couldn't inspect mouse devices", it); null }
     }
 }

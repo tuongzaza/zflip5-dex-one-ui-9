@@ -35,7 +35,7 @@ object Desk {
     private var cursorView: android.view.View? = null
     private var pointer: DeskPointer? = null
     private var taskbar: DeskTaskbar? = null
-    private const val HELPER_VERSION = 19
+    private const val HELPER_VERSION = 20
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
     // The helper says where the mouse is; the cursor is drawn here, over the desk (the system draws none there).
@@ -159,7 +159,7 @@ object Desk {
         Log.i(TAG, "desk display $id (${w}x$h)")
         if (id >= 0) {
             val ok = runCatching { helper?.startMouse(id, w, h, cursorListener) }.getOrNull() == true
-            Log.i(TAG, if (ok) "mouse on the desk" else "no mouse found")
+            Log.i(TAG, if (ok) "watching for a desktop mouse" else "mouse watcher unavailable")
             taskbar?.stop()
             taskbar = DeskTaskbar(ctx, id).also { it.start() }
             main.post {
