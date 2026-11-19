@@ -1,4 +1,4 @@
-# Chuột Bluetooth trên desktop — 0.2.8
+# Chuột Bluetooth trên desktop — 0.2.9
 
 ## Lỗi và cách sửa
 
@@ -37,6 +37,6 @@ Với Shizuku 13.6, lệnh `start.sh` cũ có thể không còn. Dùng lệnh hi
 ### Kết quả kiểm tra 0.2.9 trên Z Flip5
 
 - 302 kiểm thử JVM và build release/lintVitalRelease đạt. APK ký cùng khóa, cài cập nhật giữ dữ liệu.
-- Dừng helper26058 có kiểm soát: tự tạo helper27569, desktop414 chuyển sang415, nhận lại event16 trong khoảng3giây.
-- Dừng cả Shizuku và helper: desktop được dọn; sau khi chạy lại Shizuku, tự tạo helper29325, desktop416 và nhận lại chuột.
+- Dừng helper có kiểm soát: tự tạo helper và desktop mới, nhận lại chuột trong khoảng 3 giây.
+- Dừng cả Shizuku và helper: desktop được dọn; sau khi chạy lại Shizuku, tự tạo helper, desktop mới và nhận lại chuột.
 - Người dùng xác nhận sau khi dùng thử: chuột vẫn ở desktop, không còn tự nhảy về điện thoại.

@@ -2,7 +2,7 @@
 
 Bản tùy chỉnh từ [OpenCover 0.2](https://github.com/Shmubbier/OpenCover/releases/tag/v0.2), hỗ trợ màn hình ngoài Z Flip5 và desktop qua màn hình kết nối.
 
-**[Tải APK 0.2.6](https://github.com/tuongzaza/zflip5-opencover-rotation/releases/download/v0.2.6/OpenCover-0.2.6.apk)** · **[Hướng dẫn cài đặt tiếng Việt](docs/CAI_DAT.md)** · [Các bản phát hành](https://github.com/tuongzaza/zflip5-opencover-rotation/releases)
+**[Tải APK 0.2.9](https://github.com/tuongzaza/zflip5-opencover-rotation/releases/download/v0.2.9/OpenCover-0.2.9.apk)** · **[Hướng dẫn cài đặt tiếng Việt](docs/CAI_DAT.md)** · [Các bản phát hành](https://github.com/tuongzaza/zflip5-opencover-rotation/releases)
 
 ## Tính năng
 
@@ -10,6 +10,7 @@ Bản tùy chỉnh từ [OpenCover 0.2](https://github.com/Shmubbier/OpenCover/r
 - Desktop trên màn hình USB-C: ứng dụng chạy trong cửa sổ, có thanh tác vụ và điều khiển cửa sổ do hệ thống cung cấp.
 - Dùng điện thoại bình thường hoặc làm bàn di chuột qua mục **Chế độ điện thoại** trong truy cập nhanh.
 - Đổi hình nền OpenCover trên điện thoại và desktop riêng qua mục **Hình nền**.
+- Chuột USB/Bluetooth được nhận lại khi kết nối; desktop phục hồi khi helper/Shizuku sẵn sàng trở lại. Xem [ghi chú kiểm tra](docs/bluetooth-mouse.md).
 - Con trỏ từ chuột USB, bàn di chuột điện thoại và TwinDesk; [bản vá TwinDesk Linux](tools/twindesk/README.md) đi kèm.
 - Mirror có thể chọn một desktop đang tồn tại; nguồn hình và tọa độ điều khiển dùng cùng display.
 
@@ -18,6 +19,8 @@ Bản tùy chỉnh từ [OpenCover 0.2](https://github.com/Shmubbier/OpenCover/r
 APK yêu cầu **Android 14 trở lên**. Bản hiện tại đã được thử trên **Galaxy Z Flip5 SM-F731N, One UI 8.5 / Android 16**. Các tính năng cover và desktop dùng API riêng của Samsung; cài được APK không đồng nghĩa mọi chức năng hoạt động trên mọi máy. Desktop cần Shizuku đang chạy và một màn hình được Android nhận diện. Không bổ sung khả năng xuất hình cho cáp, hub hoặc thiết bị không hỗ trợ đường kết nối đó.
 
 Phóng to cửa sổ không bảo đảm ứng dụng chuyển sang giao diện tablet: Cài đặt Samsung và YouTube vẫn dùng bố cục điện thoại trên máy thử. Bản này không giả model thiết bị và không yêu cầu root.
+
+Với bàn phím Bluetooth, chọn **Samsung Keyboard** làm mặc định. Gboard đã tái hiện lỗi giữ chữ đến khi bấm Windows trên máy thử; Samsung Keyboard nhập ngay sau khi mở lại ô tìm kiếm. Xem [cách thiết lập](docs/CAI_DAT.md#7-bàn-phím-bluetooth). Đây là cài đặt hệ thống trên từng điện thoại; APK không tự đổi hoặc gỡ bàn phím.
 
 ## Build từ mã nguồn
 

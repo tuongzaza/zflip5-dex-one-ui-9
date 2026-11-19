@@ -1,14 +1,14 @@
-# Cài OpenCover 0.2.6 trên thiết bị khác
+# Cài OpenCover 0.2.9 trên thiết bị khác
 
 ## 1. Chuẩn bị và cài APK
 
 - Android 14 trở lên; ưu tiên Galaxy Z Flip5. Đã thử SM-F731N với One UI 8.5/Android 16; model/firmware khác chưa được xác minh.
-- Tải **OpenCover-0.2.6.apk** từ [GitHub Releases](https://github.com/tuongzaza/zflip5-opencover-rotation/releases/tag/v0.2.6). Có SHA256SUMS.txt để đối chiếu.
+- Tải **OpenCover-0.2.9.apk** từ [GitHub Releases](https://github.com/tuongzaza/zflip5-opencover-rotation/releases/tag/v0.2.9). Có SHA256SUMS.txt để đối chiếu.
 - Cho phép trình duyệt/trình quản lý tệp cài ứng dụng không rõ nguồn gốc, rồi mở APK. Hoặc dùng máy tính:
 
 ```sh
 adb devices
-adb install -r OpenCover-0.2.6.apk
+adb install --no-incremental -r OpenCover-0.2.9.apk
 ```
 
 Nếu báo chữ ký không khớp, đừng gỡ bản cũ khi chưa sao lưu dữ liệu cần giữ. Bản upstream `dev.opencover` và bản này `dev.opencover.globalrotation` là hai package khác nhau. Bản cũ cùng package nhưng khác khóa ký không thể cập nhật đè; cần bản ký đúng khóa hoặc gỡ bản cũ (mất dữ liệu OpenCover).
@@ -35,11 +35,7 @@ Lệnh trên không tự bật Trợ năng; bạn bật bằng giao diện Andro
 
 Cài [Shizuku chính thức](https://github.com/RikkaApps/Shizuku/releases). Bật Tùy chọn nhà phát triển và Gỡ lỗi không dây, ghép đôi trong Shizuku rồi bấm Start. Mở OpenCover và cho phép yêu cầu Shizuku.
 
-Hoặc nối máy tính, xác nhận USB debugging trên điện thoại rồi chạy:
-
-```sh
-adb shell sh /sdcard/Android/data/moe.shizuku.privileged.api/start.sh
-```
+Hoặc nối máy tính, xác nhận USB debugging trên điện thoại rồi chạy **đúng lệnh khởi động do phiên bản Shizuku đang cài hiển thị**. Shizuku 13.6 có thể không còn `start.sh`; không dùng đường dẫn APK lấy từ điện thoại khác.
 
 Không root thì cần khởi động lại Shizuku sau khi khởi động lại điện thoại. [Hướng dẫn chính thức](https://shizuku.rikka.app/guide/setup/).
 
@@ -68,10 +64,20 @@ Không thay đổi DPI điện thoại để dùng desktop. Thử nghiệm DPI 2
 
 Đây là phần tùy chọn, không cần để sử dụng chuột USB hoặc bàn di chuột điện thoại. Xem [hướng dẫn và bản vá TwinDesk 3.0.0 Linux](../tools/twindesk/README.md). Không tự cài bản vá Linux vào TwinDesk Windows/macOS.
 
+## 7. Bàn phím Bluetooth
+
+Ghép đôi bàn phím với điện thoại rồi chọn **Cài đặt → Quản lý chung → Danh sách bàn phím và mặc định → Bàn phím mặc định → Bàn phím Samsung** (tên mục có thể khác theo ngôn ngữ/One UI).
+
+Trên Z Flip5 đã thử, Gboard nhận phím nhưng có lúc giữ chữ trong ô tìm kiếm Cài đặt cho đến khi bấm Windows một hoặc hai lần. Tạo lại phiên Gboard chỉ khắc phục tạm thời; Samsung Keyboard nhập ngay cả sau khi đóng/mở lại tìm kiếm. Vì vậy cấu hình được kiểm tra với bản này dùng Samsung Keyboard. Việc đổi/gỡ bàn phím là thao tác trên từng điện thoại, không nằm trong APK OpenCover; không bắt buộc gỡ Gboard để chọn Samsung.
+
+Nếu muốn bỏ Gboard, chọn Samsung làm mặc định trước rồi gỡ Gboard qua Cài đặt → Ứng dụng. Gỡ ứng dụng có thể xóa dữ liệu và tùy chỉnh của bàn phím đó.
+
 ## Xử lý sự cố
 
 | Hiện tượng | Kiểm tra |
 |---|---|
+| Gõ chỉ hiện sau khi bấm Windows | Chọn Samsung Keyboard; đóng/mở lại ô tìm kiếm rồi thử gõ |
+| Chuột quay về điện thoại khi mất desktop | Kiểm tra Shizuku; bản 0.2.9 tạo lại desktop khi dịch vụ sẵn sàng, các cửa sổ cũ có thể bị đóng |
 | Không có desktop | Màn hình có được Android nhận, Shizuku có chạy và đã cho phép OpenCover, Trợ năng có bật |
 | Mất desktop sau reboot | Khởi động lại Shizuku; mở OpenCover |
 | Không thấy ô Hình nền/chế độ | Mở bảng truy cập nhanh OpenCover và kiểm tra phần sửa ô |
