@@ -42,7 +42,7 @@ class DeskService(context: Context) : IDesk.Stub() {
         @Suppress("UNCHECKED_CAST")
         (get.invoke(atm, 50, false, false, displayId) as List<android.app.ActivityManager.RunningTaskInfo>)
             .filter { t -> runCatching { t.javaClass.getMethod("getActivityType").invoke(t) == 1 }.getOrDefault(true) } // standard apps, not the desktop
-            .mapNotNull { t -> t.baseActivity?.let { "${t.taskId} ${it.packageName} ${t.isVisible} ${starting(t)} ${bounds(t)}" } }
+            .mapNotNull { t -> t.baseActivity?.let { "${t.taskId} ${it.packageName} ${t.isVisible} ${starting(t)} ${bounds(t)} ${runCatching { t.javaClass.getField("isFocused").getBoolean(t) }.getOrDefault(false)}" } }
             .toTypedArray()
     }.getOrElse { Log.w("OpenCoverDesk", "couldn't list the desk's windows", it); emptyArray() }
 
@@ -62,6 +62,28 @@ class DeskService(context: Context) : IDesk.Stub() {
         val options = android.app.ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle()
         runCatching { atm.javaClass.getMethod("startActivityFromRecents", Int::class.javaPrimitiveType, android.os.Bundle::class.java).invoke(atm, taskId, options) }
             .onFailure { Log.w("OpenCoverDesk", "couldn't show task $taskId", it) }
+    }
+
+    private fun ownsTask(taskId: Int, displayId: Int): Boolean =
+        mouse?.locked != true && display?.display?.displayId == displayId && tasks(displayId).any { it.substringBefore(' ').toIntOrNull() == taskId }
+
+    override fun resizeTask(taskId: Int, displayId: Int, left: Int, top: Int, right: Int, bottom: Int): Boolean {
+        if (!ownsTask(taskId, displayId)) return false
+        val mode = display?.display?.mode ?: return false
+        if (left < 0 || top < 0 || right <= left || bottom <= top || right > mode.physicalWidth || bottom > mode.physicalHeight) return false
+        return runCatching {
+            atm.javaClass.getMethod("resizeTask", Int::class.javaPrimitiveType, android.graphics.Rect::class.java, Int::class.javaPrimitiveType)
+                .invoke(atm, taskId, android.graphics.Rect(left, top, right, bottom), 2)
+            true
+        }.getOrElse { Log.w("OpenCoverDesk", "couldn't resize task $taskId", it); false }
+    }
+
+    override fun minimizeTask(taskId: Int, displayId: Int): Boolean {
+        if (!ownsTask(taskId, displayId)) return false
+        return runCatching {
+            val type = Class.forName("com.samsung.android.multiwindow.MultiWindowManager")
+            type.getMethod("minimizeTaskById", Int::class.javaPrimitiveType).invoke(type.getConstructor().newInstance(), taskId) == true
+        }.getOrElse { Log.w("OpenCoverDesk", "couldn't minimize task $taskId", it); false }
     }
 
     // IWallpaperManager straight, so the calls carry the shell's package (WallpaperManager would send OpenCover's).

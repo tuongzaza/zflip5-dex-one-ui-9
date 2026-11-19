@@ -35,7 +35,9 @@ object Desk {
     private var cursorView: android.view.View? = null
     private var pointer: DeskPointer? = null
     private var taskbar: DeskTaskbar? = null
-    private const val HELPER_VERSION = 21
+    internal const val TASKBAR_HEIGHT = 56
+    private var layouts: DeskLayout? = null
+    private const val HELPER_VERSION = 22
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
     // The helper says where the mouse is; the cursor is drawn here, over the desk (the system draws none there).
@@ -172,6 +174,7 @@ object Desk {
         useOurWallpaper(ctx, w, h)
         val id = runCatching { helper?.create(surface, w, h, DPI) }.getOrNull() ?: -1
         displayId = id
+        layouts = if (id >= 0) DeskLayout(w, (h - TASKBAR_HEIGHT).coerceAtLeast(1)) else null
         Log.i(TAG, "desk display $id (${w}x$h)")
         if (id >= 0) {
             val ok = runCatching { helper?.startMouse(id, w, h, cursorListener) }.getOrNull() == true
@@ -305,6 +308,7 @@ object Desk {
         root = null; cursorView = null; pointer = null
         view = null
         displayId = -1
+        layouts = null
         monitorId = -1
         runCatching { Shizuku.unbindUserService(args, connection, true) }
         helper = null; pending = null
@@ -339,7 +343,13 @@ object Desk {
     private var background: android.graphics.Bitmap? = null
 
     /** The desk's windows changed (the taskbar's poll): the pointer resizes on their edges. */
-    fun windowsChanged(windows: List<Window>) { pointer?.windows = windows }
+    fun windowsChanged(windows: List<Window>) {
+        pointer?.windows = windows
+        layouts?.let { layout ->
+            layout.retain(windows.map { it.task }.toSet())
+            windows.forEach { layout.observe(it.task, it.layoutBounds()) }
+        }
+    }
 
     /**
      * The mouse went over a view on the desk (the app's hover event): the text beam over a text field. Only the view's
@@ -353,16 +363,51 @@ object Desk {
 
     /** An app window on the desk. */
     data class Window(val task: Int, val pkg: String, val visible: Boolean, val starting: Boolean = false,
-                      val bounds: android.graphics.Rect = android.graphics.Rect())
+                      val bounds: android.graphics.Rect = android.graphics.Rect(), val focused: Boolean = false)
 
     /** The desk's app windows, front first, minimized ones included. */
     fun windows(): List<Window> = runCatching { helper?.tasks(displayId) }.getOrNull().orEmpty().mapNotNull { line ->
-        val f = line.split(' ').takeIf { it.size == 8 } ?: return@mapNotNull null
-        Window(f[0].toInt(), f[1], f[2].toBoolean(), f[3].toBoolean(), android.graphics.Rect(f[4].toInt(), f[5].toInt(), f[6].toInt(), f[7].toInt()))
+        val f = line.split(' ').takeIf { it.size == 9 } ?: return@mapNotNull null
+        Window(f[0].toInt(), f[1], f[2].toBoolean(), f[3].toBoolean(), android.graphics.Rect(f[4].toInt(), f[5].toInt(), f[6].toInt(), f[7].toInt()), f[8].toBoolean())
     }
 
     fun show(task: Int) { runCatching { helper?.showTask(task, displayId) } }
     fun close(task: Int) { runCatching { helper?.closeTask(task) } }
+
+    private fun Window.layoutBounds() = DeskLayout.Bounds(bounds.left, bounds.top, bounds.right, bounds.bottom)
+    internal fun isMaximized(window: Window) = layouts?.isMaximized(window.layoutBounds()) == true
+
+    private fun place(task: Int, b: DeskLayout.Bounds): String? {
+        return runCatching {
+            val h = helper ?: return "Shizuku chưa sẵn sàng"
+            h.showTask(task, displayId)
+            if (h.resizeTask(task, displayId, b.left, b.top, b.right, b.bottom)) null else "Không đổi được kích thước cửa sổ"
+        }.getOrElse { Log.w(TAG, "couldn't place task $task", it); "Không điều khiển được cửa sổ" }
+    }
+
+    internal fun toggleMaximize(task: Int): String? {
+        val layout = layouts ?: return "Desktop chưa sẵn sàng"
+        val window = windows().firstOrNull { it.task == task } ?: return "Cửa sổ đã đóng"
+        return place(task, layout.toggle(task, window.layoutBounds()))
+    }
+    internal fun minimize(task: Int): String? = runCatching {
+        if (helper?.minimizeTask(task, displayId) == true) null else "Không thu nhỏ được cửa sổ"
+    }.getOrElse { Log.w(TAG, "couldn't minimize task $task", it); "Không thu nhỏ được cửa sổ" }
+
+    internal fun snap(task: Int, count: Int, index: Int): String? {
+        if (count !in 2..3 || index !in 0 until count) return "Vùng cửa sổ không hợp lệ"
+        val layout = layouts ?: return "Desktop chưa sẵn sàng"
+        return place(task, layout.columns(count)[index])
+    }
+    internal fun arrange(count: Int): String? {
+        if (count !in 2..3) return "Số vùng không hợp lệ"
+        val layout = layouts ?: return "Desktop chưa sẵn sàng"
+        val tasks = windows().filter { it.pkg != service?.packageName }.take(count)
+        if (tasks.size < count) return "Mở ít nhất $count ứng dụng trên desktop"
+        val columns = layout.columns(count)
+        tasks.forEachIndexed { i, window -> place(window.task, columns[i])?.let { return it } }
+        return null
+    }
 
     /**
      * DeX's taskbar Recents button sends the Recents key, which the folded phone ignores (and would show on the phone,

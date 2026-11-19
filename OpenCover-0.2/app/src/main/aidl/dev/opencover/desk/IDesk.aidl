@@ -23,7 +23,7 @@ interface IDesk {
     /** Gives the mouse back to the system. */
     void stopMouse() = 4;
 
-    /** The app windows on display [displayId], front first, each as "taskId package visible starting left top right bottom". */
+    /** The app windows on display [displayId], front first, each as "taskId package visible starting left top right bottom focused". */
     String[] tasks(int displayId) = 5;
 
     /** Brings a window to the front on [displayId], restoring it if it was minimized. */
@@ -45,4 +45,8 @@ interface IDesk {
     void focusDisplay(int displayId) = 13;
     /** Relative touchpad input, ordered and non-blocking for the phone UI. */
     oneway void touchpad(float dx, float dy, int buttons, float scroll) = 14;
+    /** Resizes only a task on this helper's current desktop, within its display bounds. */
+    boolean resizeTask(int taskId, int displayId, int left, int top, int right, int bottom) = 15;
+    /** Minimizes a task without closing it; refuses tasks outside the current desktop. */
+    boolean minimizeTask(int taskId, int displayId) = 16;
 }
