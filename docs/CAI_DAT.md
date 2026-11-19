@@ -1,14 +1,14 @@
-# Cài OpenCover 0.2.9 trên thiết bị khác
+# Cài OpenCover 0.2.14 trên thiết bị khác
 
 ## 1. Chuẩn bị và cài APK
 
 - Android 14 trở lên; ưu tiên Galaxy Z Flip5. Đã thử SM-F731N với One UI 8.5/Android 16; model/firmware khác chưa được xác minh.
-- Tải **OpenCover-0.2.9.apk** từ [GitHub Releases](https://github.com/tuongzaza/zflip5-dex-one-ui-9/releases/tag/v0.2.9). Có SHA256SUMS.txt để đối chiếu.
+- Tải **OpenCover-0.2.14.apk** từ [GitHub Releases](https://github.com/tuongzaza/zflip5-dex-one-ui-9/releases/tag/v0.2.14). Có SHA256SUMS.txt để đối chiếu.
 - Cho phép trình duyệt/trình quản lý tệp cài ứng dụng không rõ nguồn gốc, rồi mở APK. Hoặc dùng máy tính:
 
 ```sh
 adb devices
-adb install --no-incremental -r OpenCover-0.2.9.apk
+adb install --no-incremental -r OpenCover-0.2.14.apk
 ```
 
 Nếu báo chữ ký không khớp, đừng gỡ bản cũ khi chưa sao lưu dữ liệu cần giữ. Bản upstream `dev.opencover` và bản này `dev.opencover.globalrotation` là hai package khác nhau. Bản cũ cùng package nhưng khác khóa ký không thể cập nhật đè; cần bản ký đúng khóa hoặc gỡ bản cũ (mất dữ liệu OpenCover).
@@ -44,7 +44,8 @@ Không root thì cần khởi động lại Shizuku sau khi khởi động lại
 1. Kết nối màn hình/hub với điện thoại. Xác nhận Android nhận màn hình.
 2. Trong OpenCover vào **Settings → Experimental → Desktop on external monitor** và bật tính năng.
 3. Giữ OpenCover Trợ năng và Shizuku đang chạy. Desktop khởi động trên màn hình được nhận diện.
-4. Mở ứng dụng từ desktop; dùng điều khiển cửa sổ của hệ thống để thu nhỏ/phóng to/đóng. Nhấn icon ứng dụng đang mở trên taskbar để đưa nó ra trước.
+4. Mỗi cửa sổ có cụm nút ở góc trên bên phải: `−` thu nhỏ, `□/❐` phóng to/khôi phục đúng kích thước trước đó, `▥` chia vùng, `×` đóng. Nhấn icon trên taskbar để hiện lại app đã thu nhỏ.
+5. Rê chuột lên `▥` khoảng 0,25 giây để mở sơ đồ chia đôi/chia ba. Bấm một ô để đặt cửa sổ vào vùng đó; nút `↻` dưới mỗi sơ đồ tự sắp xếp 2 hoặc 3 app đang mở (cần mở đủ app). Giữ icon trên taskbar cũng có thể đặt riêng cửa sổ vào từng vùng. Xem [chi tiết](window-layout.md).
 
 Cáp chỉ sạc không xuất hình; việc có cổng USB-C không tự bảo đảm xuất được video. Chức năng còn phụ thuộc model, firmware và màn hình/hub. Desktop OpenCover là triển khai tùy chỉnh, không biến máy thành thiết bị được Samsung hỗ trợ DeX chính thức.
 
@@ -52,6 +53,7 @@ Cáp chỉ sạc không xuất hình; việc có cổng USB-C không tự bảo 
 
 Vuốt xuống **bảng truy cập nhanh của OpenCover** trên màn hình gập:
 
+- Nút làm đen màn hình điện thoại nằm dưới thanh độ sáng trong bảng OpenCover. Desktop tiếp tục chạy; chạm vào màn hình điện thoại để hiện lại. Đây là lớp đen, không khóa máy hay tắt nguồn tấm nền.
 - **Chế độ điện thoại** → Điện thoại hoặc Bàn di chuột. Bàn di chuột: rê một ngón, chạm để bấm, hai ngón cuộn, giữ để kéo.
 - **Hình nền** → Điện thoại (OpenCover) hoặc Desktop / DeX → chọn ảnh → chỉnh khung → **Set**. Hai hình nền độc lập. Hình nền điện thoại ở đây là màn hình Home của OpenCover; hình nền/màn hình khóa Samsung được quản lý riêng.
 - **Auto-rotate** để tự xoay màn hình cover; thanh điều hướng theo cạnh dưới của nội dung. Có thể đặt góc cố định trong Settings → Phone & display.
@@ -77,7 +79,7 @@ Nếu muốn bỏ Gboard, chọn Samsung làm mặc định trước rồi gỡ 
 | Hiện tượng | Kiểm tra |
 |---|---|
 | Gõ chỉ hiện sau khi bấm Windows | Chọn Samsung Keyboard; đóng/mở lại ô tìm kiếm rồi thử gõ |
-| Chuột quay về điện thoại khi mất desktop | Kiểm tra Shizuku; bản 0.2.9 tạo lại desktop khi dịch vụ sẵn sàng, các cửa sổ cũ có thể bị đóng |
+| Chuột quay về điện thoại khi mất desktop | Kiểm tra Shizuku; bản 0.2.14 tạo lại desktop khi dịch vụ sẵn sàng, các cửa sổ cũ có thể bị đóng |
 | Không có desktop | Màn hình có được Android nhận, Shizuku có chạy và đã cho phép OpenCover, Trợ năng có bật |
 | Mất desktop sau reboot | Khởi động lại Shizuku; mở OpenCover |
 | Không thấy ô Hình nền/chế độ | Mở bảng truy cập nhanh OpenCover và kiểm tra phần sửa ô |

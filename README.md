@@ -2,13 +2,14 @@
 
 Bản tùy chỉnh từ [OpenCover 0.2](https://github.com/Shmubbier/OpenCover/releases/tag/v0.2), hỗ trợ màn hình ngoài Z Flip5 và desktop qua màn hình kết nối.
 
-**[Tải APK 0.2.9](https://github.com/tuongzaza/zflip5-dex-one-ui-9/releases/download/v0.2.9/OpenCover-0.2.9.apk)** · **[Hướng dẫn cài đặt tiếng Việt](docs/CAI_DAT.md)** · [Các bản phát hành](https://github.com/tuongzaza/zflip5-dex-one-ui-9/releases)
+**[Tải APK 0.2.14](https://github.com/tuongzaza/zflip5-dex-one-ui-9/releases/download/v0.2.14/OpenCover-0.2.14.apk)** · **[Hướng dẫn cài đặt tiếng Việt](docs/CAI_DAT.md)** · [Các bản phát hành](https://github.com/tuongzaza/zflip5-dex-one-ui-9/releases)
 
 ## Tính năng
 
 - Launcher trên màn hình gập, xoay màn hình và thanh điều hướng theo nội dung.
-- Desktop trên màn hình USB-C: ứng dụng chạy trong cửa sổ, có thanh tác vụ và điều khiển cửa sổ do hệ thống cung cấp.
-- Dùng điện thoại bình thường hoặc làm bàn di chuột qua mục **Chế độ điện thoại** trong truy cập nhanh.
+- Desktop trên màn hình USB-C: ứng dụng chạy trong cửa sổ, có taskbar và các nút thu nhỏ, phóng to/khôi phục, chia vùng và đóng đi theo từng cửa sổ.
+- Rê chuột vào `▥` để mở sơ đồ chia đôi/chia ba; bấm vùng để đặt app vào đó, hoặc `↻` để tự sắp xếp 2–3 app đang mở. Nền cụm nút khớp màu thanh tiêu đề. Xem [hướng dẫn cửa sổ](docs/window-layout.md).
+- Dùng điện thoại bình thường hoặc làm bàn di chuột qua mục **Chế độ điện thoại** trong truy cập nhanh. Có nút làm đen màn hình điện thoại khi vẫn dùng desktop; chạm để hiện lại.
 - Đổi hình nền OpenCover trên điện thoại và desktop riêng qua mục **Hình nền**.
 - Chuột USB/Bluetooth được nhận lại khi kết nối; desktop phục hồi khi helper/Shizuku sẵn sàng trở lại. Xem [ghi chú kiểm tra](docs/bluetooth-mouse.md).
 - Con trỏ từ chuột USB, bàn di chuột điện thoại và TwinDesk; [bản vá TwinDesk Linux](tools/twindesk/README.md) đi kèm.

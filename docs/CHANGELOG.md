@@ -1,5 +1,16 @@
 # Thay đổi
 
+## 0.2.14
+
+- Nút thu nhỏ, phóng to/khôi phục, chia vùng và đóng nằm trên từng cửa sổ, đi theo vị trí/kích thước của app; taskbar giữ icon app và menu khi giữ icon.
+- Phóng to ghi nhớ đúng vùng cũ để khôi phục; chia đôi hoặc chia ba desktop, chừa taskbar.
+- Hover `▥` tự mở bảng chọn bằng hình, có vùng sáng khi rê và bấm chọn; `↻` tự sắp xếp 2–3 app đang mở.
+- Nền cụm nút lấy theo màu thanh tiêu đề từng app, cập nhật cả khi app tải màu muộn. Bảng chọn không lấy focus bàn phím.
+- Thêm nút làm đen màn hình điện thoại trong bảng truy cập nhanh OpenCover, chạm để hiện lại trong khi desktop tiếp tục chạy.
+- Taskbar thử gắn lại nếu đăng ký overlay thất bại; ghi lỗi để chẩn đoán.
+
+Kiểm tra: 315 kiểm thử JVM, build release/lint đạt. Đã thử trên Z Flip5 One UI 8.5: phóng to/khôi phục, kéo cửa sổ, thu nhỏ/hiện lại/đóng, chia 2/3, giữ icon chọn vùng, hover mở bảng/tô sáng/đóng khi rời ra. Ảnh HDMI xác nhận màu nền nút khớp Chrome, Cài đặt và Máy tính. Các app/model khác có thể có giới hạn riêng.
+
 ## 0.2.9
 
 - Nhận chuột USB/Bluetooth bằng khả năng thiết bị do `getevent` cung cấp, tránh đường sysfs bị Samsung chặn.
