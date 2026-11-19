@@ -256,8 +256,18 @@ object Desk {
     /** The desk becomes the focused display. */
     fun focusDesk() { runCatching { helper?.focusDisplay(displayId) } }
 
-    /** The cover rests now, if it rests while the desk runs. */
-    fun restCover() { dim?.rest() }
+    /** Explicit phone-only blackout; ordinary phone mode stays usable until requested again. */
+    fun restCover() {
+        main.post {
+            val ctx = service ?: return@post
+            if (!running) return@post
+            runCatching {
+                dim?.stop()
+                dim = CoverDim(ctx, PhoneModeActivity.phoneDisplay(ctx)).also { it.start() }
+                focusDesk()
+            }.onFailure { Log.w(TAG, "couldn't black out the phone display", it) }
+        }
+    }
 
     fun post(block: () -> Unit) { main.post(block) }
 

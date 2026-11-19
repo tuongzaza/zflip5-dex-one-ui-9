@@ -141,6 +141,12 @@ fun QuickPanel() {
             }
         }
 
+        if (!editing && dev.opencover.desk.Desk.running) {
+            TextButton(onClick = { dev.opencover.desk.Desk.restCover() }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Filled.PhonelinkErase, contentDescription = null)
+                Text("Tắt màn hình điện thoại", modifier = Modifier.padding(start = 8.dp))
+            }
+        }
         HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { page ->
             val addPage = editing && hidden.isNotEmpty() && page == pages - 1
             val list = if (addPage) hidden.take(PAGE_SIZE) else tiles.drop(page * PAGE_SIZE).take(PAGE_SIZE)
