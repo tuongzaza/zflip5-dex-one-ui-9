@@ -59,7 +59,19 @@ object Desk {
             helper = IDesk.Stub.asInterface(binder)
             pending?.invoke(); pending = null
         }
-        override fun onServiceDisconnected(name: ComponentName?) { helper = null }
+        override fun onServiceDisconnected(name: ComponentName?) {
+            val disconnected = helper
+            main.post {
+                if (helper !== disconnected) return@post
+                helper = null
+                val ctx = service ?: return@post
+                if (running) {
+                    Log.w(TAG, "desk helper disconnected; rebuilding when Shizuku is available")
+                    stop()
+                    main.postDelayed({ displaysChanged(ctx) }, 1_500)
+                }
+            }
+        }
     }
 
     fun wanted(ctx: Context) = ctx.getSharedPreferences("desk", Context.MODE_PRIVATE).getBoolean("on", false)
@@ -79,7 +91,11 @@ object Desk {
     /** A display came or went: the desk starts on a monitor plugged in, and stops when it's unplugged. Main thread. */
     fun displaysChanged(service: AccessibilityService) {
         val monitor = monitor(service)
-        if (running && (monitor == null || monitor.displayId != monitorId)) stop()
+        val deskGone = displayId >= 0 && service.getSystemService(DisplayManager::class.java).getDisplay(displayId) == null
+        if (running && (monitor == null || monitor.displayId != monitorId || deskGone)) {
+            if (deskGone) Log.w(TAG, "desk display disappeared; clearing the stale session")
+            stop()
+        }
         if (!running && monitor != null && wanted(service) && ShizukuShell.allowed()) Log.i(TAG, start(service))
         PhoneModeActivity.moveIfNeeded(service)
     }
@@ -281,7 +297,7 @@ object Desk {
         displayId = -1
         monitorId = -1
         runCatching { Shizuku.unbindUserService(args, connection, true) }
-        helper = null
+        helper = null; pending = null
         dev.opencover.watcher.CoverAccessibility.instance?.refreshScope()
     }
 
