@@ -342,6 +342,29 @@ object Desk {
     /** OpenCover's background fitted to the monitor, for the lock screen; set with the desk's wallpaper. */
     private var background: android.graphics.Bitmap? = null
 
+    /** Read only a tiny native-caption patch next to our controls, from the surface already on the monitor. */
+    internal fun captionColor(caption: DeskLayout.Bounds, color: (Int) -> Unit) {
+        val sv = view ?: return
+        val (w, h) = size
+        if (!sv.isAttachedToWindow || w <= 0 || h <= 0 || sv.width <= 0 || sv.height <= 0 || caption.left < 4) return
+        val src = android.graphics.Rect(
+            (caption.left - 4) * sv.width / w, (caption.top + 8) * sv.height / h,
+            (caption.left - 1) * sv.width / w, (caption.bottom - 8) * sv.height / h)
+        if (src.width() <= 0 || src.height() <= 0 || src.top < 0 || src.right > sv.width || src.bottom > sv.height) return
+        val patch = android.graphics.Bitmap.createBitmap(3, 24, android.graphics.Bitmap.Config.ARGB_8888)
+        runCatching {
+            android.view.PixelCopy.request(sv, src, patch, { result ->
+                try {
+                    if (result == android.view.PixelCopy.SUCCESS) {
+                        val pixels = IntArray(72)
+                        patch.getPixels(pixels, 0, 3, 0, 0, 3, 24)
+                        DeskCaptionPalette.dominant(pixels)?.let(color)
+                    }
+                } finally { patch.recycle() }
+            }, main)
+        }.onFailure { patch.recycle(); Log.w(TAG, "couldn't read caption colour", it) }
+    }
+
     /** The desk's windows changed (the taskbar's poll): the pointer resizes on their edges. */
     fun windowsChanged(windows: List<Window>) {
         pointer?.windows = windows

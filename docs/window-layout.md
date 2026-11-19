@@ -39,3 +39,13 @@ Theo yêu cầu cập nhật, bốn nút `−`, `□/❐`, `▥`, `×` chuyển 
 Taskbar chỉ hiển thị icon app; giữ icon vẫn mở menu đặt cửa sổ vào nửa trái/phải hoặc một phần ba màn hình. Bấm nút `▥` trên cửa sổ mở menu chia đôi/chia ba và chọn vùng cho chính cửa sổ đó.
 
 Kiểm tra trên Z Flip5: bấm nút của Máy tính phóng to từ `[27,27,718,1357]` tới `[0,0,2160,1384]`, nút đổi `❐` và khôi phục đúng vùng cũ. Kéo thanh tiêu đề tới `[107,90,798,1420]`, cụm nút chuyển tương ứng tới `[606,90,798,130]`. Menu `▥` chia Máy tính/Chrome/Cài đặt thành ba cột rộng 720 px, mỗi cửa sổ có cụm nút riêng. 312 kiểm thử JVM và build release/lint đạt.
+
+## Bố cục bằng hình và màu thanh tiêu đề — 0.2.14
+
+Rê chuột lên `▥` khoảng 250 ms tự mở bảng hai sơ đồ chia đôi/chia ba, không cần bấm. Mỗi ô là một vùng: rê lên có màu nhấn, bấm để đặt cửa sổ hiện tại vào vùng đó. Nút `↻` dưới mỗi sơ đồ tự sắp xếp hai hoặc ba app đang mở. Nhãn hướng dẫn nằm trong tooltip và mô tả trợ năng, không dùng danh sách chữ trong bảng này. Giữ icon app trên taskbar vẫn có menu điều khiển cũ.
+
+Bảng không lấy focus bàn phím; khoảng trễ đóng 250 ms cho phép đưa chuột từ nút xuống bảng. Rời cả nút và bảng thì tự đóng; bấm ra ngoài, thu nhỏ/đóng/di chuyển cửa sổ cũng đóng bảng.
+
+Cụm nút không dùng màu xám cố định theo focus nữa: lấy màu phổ biến từ vùng 3×24 px trên phần thanh tiêu đề sát cạnh nút bằng [PixelCopy của Android](https://developer.android.com/reference/android/view/PixelCopy). Chỉ đọc vùng nhỏ trên SurfaceView đang xuất desktop, không lưu ảnh, không thêm quyền chụp màn hình. Chọn lại màu biểu tượng theo độ sáng nền. Yêu cầu màu cũ bị hủy khi vị trí/focus đổi hoặc cửa sổ đóng. Lấy lại màu mỗi hai giây để theo màu thanh tiêu đề xuất hiện muộn sau khi app tải xong và đổi chủ đề khi app đang giữ focus.
+
+Kiểm tra 0.2.14 trên Z Flip5: 315 JVM tests + release/lint đạt. Sự kiện `HOVER_MOVE` mở bảng không click; rê vào ô chia ba giữa giữ bảng mở hơn một giây và làm sáng 2562 pixel xanh trong ảnh HDMI. Bấm bằng nguồn chuột thật đặt Chrome vào `[720,0,1440,1384]`. Rê ra ngoài đóng bảng sau khoảng trễ và hoạt ảnh hệ thống. Đối chiếu ảnh HDMI: Chrome native/control cùng RGB `(35,38,46)`; Cài đặt và Máy tính cùng `(45,45,48)`.

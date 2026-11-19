@@ -9,6 +9,10 @@ import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.util.Log
 import android.view.Gravity
+import android.view.MotionEvent
+import android.os.Handler
+import android.os.Looper
+import android.content.res.Configuration
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -20,7 +24,6 @@ internal class DeskCaption(
     private val displayId: Int,
     private var window: Desk.Window,
     private val action: (() -> String?) -> Unit,
-    menu: (View, Desk.Window) -> Unit,
 ) {
     private val context = ctx.createDisplayContext(ctx.getSystemService(DisplayManager::class.java).getDisplay(displayId))
     private val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
@@ -29,6 +32,13 @@ internal class DeskCaption(
     private var failed = false
     private var position: DeskLayout.Bounds? = null
     private val maximize: Button
+    private val handler = Handler(Looper.getMainLooper())
+    private var layouts: DeskSnapPopup? = null
+    private val openLayouts = Runnable { if (attached) showLayouts() }
+    private var appearance: Triple<DeskLayout.Bounds, Boolean, Int>? = null
+    private var nextColorAt = 0L
+    private var colorRequest: Runnable? = null
+    private var generation = 0
 
     init {
         fun button(symbol: String, label: String, click: (View) -> Unit): Button = Button(context).apply {
@@ -40,7 +50,23 @@ internal class DeskCaption(
         }
         button("−", "Thu nhỏ cửa sổ") { action { Desk.minimize(window.task) } }
         maximize = button("□", "Phóng to cửa sổ") { action { Desk.toggleMaximize(window.task) } }
-        button("▥", "Chia cửa sổ") { menu(it, window) }
+        button("▥", "Chia cửa sổ") { showLayouts() }.apply {
+            tooltipText = null
+            setOnHoverListener { _, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_HOVER_ENTER -> {
+                        layouts?.keepOpen()
+                        handler.removeCallbacks(openLayouts)
+                        handler.postDelayed(openLayouts, 250)
+                    }
+                    MotionEvent.ACTION_HOVER_EXIT -> {
+                        handler.removeCallbacks(openLayouts)
+                        layouts?.leave()
+                    }
+                }
+                false
+            }
+        }
         button("×", "Đóng cửa sổ") { action { Desk.close(window.task); null } }
         row.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {}
@@ -54,8 +80,23 @@ internal class DeskCaption(
         maximize.text = if (full) "❐" else "□"
         maximize.contentDescription = if (full) "Khôi phục cửa sổ" else "Phóng to cửa sổ"
         maximize.tooltipText = maximize.contentDescription
-        row.setBackgroundColor(if (window.focused) 0xff303030.toInt() else 0xff555555.toInt())
+        val state = Triple(bounds, window.focused, context.resources.configuration.uiMode)
+        val now = android.os.SystemClock.uptimeMillis()
+        if (appearance != state || now >= nextColorAt) {
+            nextColorAt = now + 2_000
+            appearance = state
+            colorRequest?.let { handler.removeCallbacks(it) }
+            val request = ++generation
+            if (position == null) tint(if (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES)
+                0xff2d2d30.toInt() else 0xfff3f3f3.toInt())
+            colorRequest = Runnable {
+                if (attached && generation == request) Desk.captionColor(bounds) {
+                    if (attached && generation == request) tint(it)
+                }
+            }.also { handler.postDelayed(it, 250) }
+        }
         if (attached && position == bounds) return
+        if (position != null && position != bounds) layouts?.dismiss()
         val params = WindowManager.LayoutParams(DeskCaptionPlacement.WIDTH, DeskCaptionPlacement.HEIGHT,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -81,7 +122,26 @@ internal class DeskCaption(
         }
     }
 
+    private fun tint(color: Int) {
+        row.setBackgroundColor(color)
+        val foreground = DeskCaptionPalette.foreground(color)
+        for (i in 0 until row.childCount) (row.getChildAt(i) as Button).setTextColor(foreground)
+    }
+
+    private fun showLayouts() {
+        if (layouts?.isShowing == true) { layouts?.keepOpen(); return }
+        val menu = DeskSnapPopup(context, window, action) { layouts = null }
+        layouts = menu
+        runCatching { menu.show(row.getChildAt(2)) }.onFailure {
+            layouts = null
+            Log.w("OpenCoverDesk", "couldn't show snap layouts", it)
+        }
+    }
+
     fun stop() {
+        generation++
+        handler.removeCallbacksAndMessages(null)
+        layouts?.dismiss()
         if (attached) runCatching { wm?.removeView(row) }
         attached = false
     }

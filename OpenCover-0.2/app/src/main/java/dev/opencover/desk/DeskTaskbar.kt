@@ -132,7 +132,7 @@ class DeskTaskbar(private val ctx: Context, private val displayId: Int) {
             val strip = DeskCaptionPlacement.bounds(b, above)
             if (strip != null) {
                 visible += w.task
-                captions.getOrPut(w.task) { DeskCaption(ctx, displayId, w, ::action, ::windowMenu) }.update(w, strip)
+                captions.getOrPut(w.task) { DeskCaption(ctx, displayId, w, ::action) }.update(w, strip)
             }
             above += b
         }
