@@ -8,9 +8,9 @@ import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
+import android.util.Log
 import android.view.Gravity
 import android.view.View
-import android.widget.Button
 import android.widget.PopupMenu
 import android.widget.Toast
 import android.widget.FrameLayout
@@ -23,33 +23,61 @@ import android.view.WindowManager
  * workspaces, which Samsung never makes on a virtual display, so OpenCover draws them: click one to bring it to the
  * front (or back from minimized). A bar under each; brighter when it's showing.
  */
-class DeskTaskbar(ctx: Context, displayId: Int) {
+class DeskTaskbar(private val ctx: Context, private val displayId: Int) {
     private val wctx = ctx.createDisplayContext(ctx.getSystemService(DisplayManager::class.java).getDisplay(displayId))
         .createWindowContext(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, null)
-    private val wm = wctx.getSystemService(WindowManager::class.java)
+    private var wm = wctx.getSystemService(WindowManager::class.java)
     private val row = LinearLayout(wctx).apply { orientation = LinearLayout.HORIZONTAL }
     private val main = Handler(Looper.getMainLooper())
     private val thread = HandlerThread("desk-taskbar").apply { start() }
     private val bg = Handler(thread.looper)
     private var shown = emptyList<Desk.Window>()
+    private var stopped = false
+    private var attachFailed = false
     private var added = false
     private var shownLocked = false
     private var popup: PopupMenu? = null
+    private val captions = mutableMapOf<Int, DeskCaption>()
 
     fun start() {
-        val lp = WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT, BAR_PX,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT).apply { gravity = Gravity.BOTTOM or Gravity.START; x = START_PX }
-        added = runCatching { wm.addView(row, lp) }.isSuccess
+        row.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {}
+            override fun onViewDetachedFromWindow(v: View) { added = false }
+        })
+        attach()
         show(emptyList())
         bg.post(poll)
     }
 
+    private fun attach() {
+        if (stopped || added) return
+        val display = ctx.getSystemService(DisplayManager::class.java).getDisplay(displayId) ?: return
+        // A newly created display may not have its accessibility token yet. Refresh it on every retry.
+        val lp = WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT, BAR_PX,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT).apply {
+                gravity = Gravity.BOTTOM or Gravity.START; x = START_PX
+                title = "OpenCover desktop taskbar"
+            }
+        runCatching {
+            val context = ctx.createWindowContext(display, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, null)
+            wm = context.getSystemService(WindowManager::class.java)
+            wm.addView(row, lp)
+            added = true
+            Log.i("OpenCoverDesk", "taskbar attached on display $displayId")
+            attachFailed = false
+        }.onFailure {
+            if (!attachFailed) Log.w("OpenCoverDesk", "taskbar unavailable on display $displayId; retrying", it)
+            attachFailed = true
+        }
+    }
+
     fun stop() {
+        stopped = true
         bg.removeCallbacksAndMessages(null)
         thread.quitSafely()
-        main.post { popup?.dismiss(); if (added) runCatching { wm.removeView(row) }; added = false }
+        main.post { popup?.dismiss(); captions.values.forEach { it.stop() }; captions.clear(); if (added) runCatching { wm.removeView(row) }; added = false }
     }
 
     // ponytail: polls the window list a few times a second; a task-stack listener if this ever shows up in battery use.
@@ -62,7 +90,8 @@ class DeskTaskbar(ctx: Context, displayId: Int) {
             Desk.windowsChanged(all)
             if (!locked) DeskGame.windowsChanged(all.map { it.pkg }.toSet())
             val now = all.map { it.copy(starting = false) }.sortedBy { it.task } // launch order, as a taskbar keeps it
-            if (now != shown || locked != shownLocked) main.post { show(now) }
+            if (now != shown || locked != shownLocked) main.post { if (!stopped) show(now) }
+            main.post { if (!stopped) { attach(); showCaptions(all) } }
             bg.postDelayed(this, 300) // often enough for the pointer to follow windows as they move
         }
     }
@@ -78,23 +107,6 @@ class DeskTaskbar(ctx: Context, displayId: Int) {
         shownLocked = false
         shown = windows
         row.removeAllViews()
-        val active = windows.firstOrNull { it.focused } ?: windows.firstOrNull { it.visible } ?: windows.firstOrNull()
-        fun control(symbol: String, label: String, enabled: Boolean = active != null, click: (View) -> Unit) {
-            row.addView(Button(wctx).apply {
-                text = symbol; textSize = 18f
-                contentDescription = label; tooltipText = label
-                isEnabled = enabled
-                minWidth = 0; minimumWidth = 0; setPadding(0, 0, 0, 0)
-                setOnClickListener { click(it) }
-            }, LinearLayout.LayoutParams(42, BAR_PX))
-        }
-        control("−", "Thu nhỏ cửa sổ", active?.visible == true) { active?.let { w -> action { Desk.minimize(w.task) } } }
-        control(if (active != null && Desk.isMaximized(active)) "❐" else "□",
-            if (active != null && Desk.isMaximized(active)) "Khôi phục cửa sổ" else "Phóng to cửa sổ") {
-            active?.let { w -> action { Desk.toggleMaximize(w.task) } }
-        }
-        control("▥", "Chia cửa sổ", true) { windowMenu(it, active) }
-        control("×", "Đóng cửa sổ") { active?.let { w -> action { Desk.close(w.task); null } } }
         val pm = wctx.packageManager
         windows.forEach { w ->
             row.addView(FrameLayout(wctx).apply {
@@ -110,6 +122,21 @@ class DeskTaskbar(ctx: Context, displayId: Int) {
                 setOnContextClickListener { windowMenu(it, w); true }
             }, LinearLayout.LayoutParams(CELL_PX, BAR_PX))
         }
+    }
+
+    private fun showCaptions(windows: List<Desk.Window>) {
+        val visible = mutableSetOf<Int>()
+        val above = mutableListOf<DeskLayout.Bounds>()
+        windows.filter { it.visible }.forEach { w ->
+            val b = w.bounds.let { DeskLayout.Bounds(it.left, it.top, it.right, it.bottom) }
+            val strip = DeskCaptionPlacement.bounds(b, above)
+            if (strip != null) {
+                visible += w.task
+                captions.getOrPut(w.task) { DeskCaption(ctx, displayId, w, ::action, ::windowMenu) }.update(w, strip)
+            }
+            above += b
+        }
+        captions.keys.filter { it !in visible }.forEach { captions.remove(it)?.stop() }
     }
 
     private fun action(work: () -> String?) {
