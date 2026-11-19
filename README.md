@@ -2,7 +2,7 @@
 
 Bản tùy chỉnh từ [OpenCover 0.2](https://github.com/Shmubbier/OpenCover/releases/tag/v0.2), hỗ trợ màn hình ngoài Z Flip5 và desktop qua màn hình kết nối.
 
-**[Tải APK 0.2.9](https://github.com/tuongzaza/zflip5-opencover-rotation/releases/download/v0.2.9/OpenCover-0.2.9.apk)** · **[Hướng dẫn cài đặt tiếng Việt](docs/CAI_DAT.md)** · [Các bản phát hành](https://github.com/tuongzaza/zflip5-opencover-rotation/releases)
+**[Tải APK 0.2.9](https://github.com/tuongzaza/zflip5-dex-one-ui-9/releases/download/v0.2.9/OpenCover-0.2.9.apk)** · **[Hướng dẫn cài đặt tiếng Việt](docs/CAI_DAT.md)** · [Các bản phát hành](https://github.com/tuongzaza/zflip5-dex-one-ui-9/releases)
 
 ## Tính năng
 

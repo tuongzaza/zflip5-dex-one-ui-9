@@ -3,7 +3,7 @@
 ## 1. Chuẩn bị và cài APK
 
 - Android 14 trở lên; ưu tiên Galaxy Z Flip5. Đã thử SM-F731N với One UI 8.5/Android 16; model/firmware khác chưa được xác minh.
-- Tải **OpenCover-0.2.9.apk** từ [GitHub Releases](https://github.com/tuongzaza/zflip5-opencover-rotation/releases/tag/v0.2.9). Có SHA256SUMS.txt để đối chiếu.
+- Tải **OpenCover-0.2.9.apk** từ [GitHub Releases](https://github.com/tuongzaza/zflip5-dex-one-ui-9/releases/tag/v0.2.9). Có SHA256SUMS.txt để đối chiếu.
 - Cho phép trình duyệt/trình quản lý tệp cài ứng dụng không rõ nguồn gốc, rồi mở APK. Hoặc dùng máy tính:
 
 ```sh
